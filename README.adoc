@@ -1,0 +1,127 @@
+= Demo for setting up Confluent Platform with CP Flink using KIND (Kubernetes in Docker)
+
+This demo show how to set up Confluent Platform with CP Flink using KIND (Kubernetes in Docker).
+
+== Preconditions
+
+You need to have the following software installed:
+
+* docker: https://www.docker.com/
+* kind: https://kind.sigs.k8s.io/
+* kubectl: Depends on your platform
+* helm: https://helm.sh/
+
+== Setting up the infrastructure
+
+=== Setting up a kubernetes cluster
+
+Create the kubernetes cluster in docker using this command:
+
+```shell
+kind create cluster
+```
+
+You can check your cluster by running:
+
+```shell
+kubectl cluster-info --context kind-kind
+```
+
+==== Testing the basic infrastructure with a simple web application
+
+You can install a basic web application for testing the infrastructure:
+
+```shell
+kubectl create namespace test
+kubectl create -n test configmap hello-world --from-file kubernetes/test/index.html
+kubectl apply -f kubernetes/test/hello-world.yaml
+```
+
+Now you should be able to access a simple website using e.g. curl:
+
+```shell
+curl localhost:80
+```
+
+Remove the test application by deleting the namespace:
+
+```shell
+kubectl delete namespace test
+```
+
+
+=== Installing Confluent Platform (KRaft mode)
+The next steps are taken from the official documentation for Confluent.
+
+Create a namespace `confluent` and set is as the default namespace.
+
+```shell
+kubectl create namespace confluent
+kubectl config set-context --current --namespace confluent
+```
+
+Configure the `helm` package manager.
+
+```shell
+helm repo add confluentinc https://packages.confluent.io/helm
+helm repo update
+```
+
+
+Install Confluent for Kubernetes:
+
+```shell
+helm upgrade --install confluent-operator confluentinc/confluent-for-kubernetes
+```
+
+List the pods:
+
+```shell
+kubectl get pods
+```
+
+
+== Usage
+
+You can run kafka commands locally as usual. Please make sure to have these lines in your /etc/hosts file, though:
+
+```shell
+127.0.0.1   kafka schemaregistry kafka-0.kafka.confluent.svc.cluster.local
+::1         kafka schemaregistry kafka-0.kafka.confluent.svc.cluster.local
+```
+
+Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
+
+```shell
+kubectl run kafka-cli -i --tty --image=docker.io/confluentinc/cp-server:7.8.0 -
+-restart=Never --rm -- bash
+```
+
+List topics as usual:
+
+```shell
+kafka-topics --bootstrap-server kafka:9092 --list
+```
+
+Check the status of the KRaft controller:
+
+```shell
+kafka-metadata-quorum --bootstrap-server kafka:9092 describe --status
+```
+
+You can connect to control center with your browser via http://control-center/ (make sure you have deleted the HTTP test described above).
+
+
+== Debugging the Setup
+
+=== Traefik
+
+Traefik is used for routing ingress HTTP and TCP connections.
+
+You can access the dashboard here: http://traefik/
+
+== Shutting down your resources
+
+```shell
+kind delete cluster
+```

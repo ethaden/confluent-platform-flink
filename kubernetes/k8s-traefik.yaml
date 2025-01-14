@@ -1,0 +1,27 @@
+service:
+  type: ClusterIP
+ports:
+  web:
+    hostPort: 80
+  websecure:
+    enabled: false
+    hostPort: 443
+  kafka:
+    port: 9092
+    hostPort: 9092
+    protocol: TCP
+    expose:
+      default: true
+  schemaregistry:
+    port: 8081
+    hostPort: 8081
+    protocol: TCP
+    expose:
+      default: true
+ingressRoute:
+  dashboard:
+    # -- Create an IngressRoute for the dashboard
+    enabled: true
+    #matchRule: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+    matchRule: Host(`traefik`)
+    entryPoints: ["web", "traefik"]

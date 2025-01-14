@@ -1,0 +1,363 @@
+---
+services:
+  zookeeper1:
+    image: confluentinc/cp-zookeeper:${CP_VERSION}
+    hostname: zookeeper1
+    #container_name: zookeeper1
+    restart: always
+    ports:
+      - "21811:21811"
+      - "31801:31801"
+      - "21801:21801"
+    volumes:
+      - data-zookeeper-log-1:/var/lib/zookeeper/log
+      - data-zookeeper-data-1:/var/lib/zookeeper/data
+    environment:
+      ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_OPTS: "-Dzookeeper.4lw.commands.whitelist=*"
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_JMX_HOSTNAME: zookeeper1
+      ZOOKEEPER_CLIENT_PORT: 21811
+      ZOOKEEPER_JMX_PORT: 21801
+ 
+  broker1:
+    image: confluentinc/cp-server:${CP_VERSION}
+    hostname: broker1
+    #container_name: broker1
+    depends_on:
+      - zookeeper1
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper1:21811'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker1:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      #CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      KAFKA_CONFLUENT_SUPPORT_METRICS_ENABLE: 'false'
+      KAFKA_CONFLUENT_REPORTERS_TELEMETRY_AUTO_ENABLE: 'false'
+      KAFKA_CONFLUENT_TELEMETRY_ENABLED: 'false'
+  
+  schema-registry:
+    image: confluentinc/cp-schema-registry:${CP_VERSION}
+    hostname: schema-registry
+    #container_name: schema-registry
+    depends_on:
+      - zookeeper1
+      - broker1
+    ports:
+      - '8081:8081'
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker1:9092'
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8081"
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper1:21811'
+  
+  # control-center:
+  #   image: confluentinc/cp-enterprise-control-center:${CP_VERSION}
+  #   hostname: control-center
+  #   container_name: control-center
+  #   depends_on:
+  #     - broker1
+  #     - schema-registry
+  #   ports:
+  #     - "9021:9021"
+  #   environment:
+  #     CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker1:9092'
+  #     CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+  #     CONTROL_CENTER_REPLICATION_FACTOR: 1
+  #     CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+  #     CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+  #     CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+  #     PORT: 9021
+
+  setup:
+   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+   profiles: [agent, filebeat]
+   volumes:
+     - certs:/usr/share/elasticsearch/config/certs
+   user: "0"
+   command: >
+     bash -c '
+       if [ x${ELASTIC_PASSWORD} == x ]; then
+         echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
+         exit 1;
+       elif [ x${KIBANA_PASSWORD} == x ]; then
+         echo "Set the KIBANA_PASSWORD environment variable in the .env file";
+         exit 1;
+       fi;
+       echo "Waiting for Elasticsearch availability";
+       until curl -s http://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+       echo "Setting kibana_system password";
+       until curl -s -X POST -u "elastic:${ELASTIC_PASSWORD}" -H "Content-Type: application/json" http://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+       echo "All done!";
+     '
+
+  es01:
+   image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+   profiles: [agent, filebeat]
+   hostname: es01
+   #container_name: es01
+   labels:
+     co.elastic.logs/module: elasticsearch
+   volumes:
+#     - certs:/usr/share/elasticsearch/config/certs
+     - esdata01:/usr/share/elasticsearch/data
+   ports:
+     - ${ES_PORT}:9200
+   environment:
+     - node.name=es01
+     - cluster.name=${CLUSTER_NAME}
+     - discovery.type=single-node
+     - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+     - bootstrap.memory_lock=true
+     - xpack.security.enabled=true
+     - xpack.security.http.ssl.enabled=false
+#     - xpack.security.http.ssl.key=certs/es01/es01.key
+#     - xpack.security.http.ssl.certificate=certs/es01/es01.crt
+#     - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+     - xpack.security.transport.ssl.enabled=false
+#     - xpack.security.transport.ssl.key=certs/es01/es01.key
+#     - xpack.security.transport.ssl.certificate=certs/es01/es01.crt
+#     - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+#     - xpack.security.transport.ssl.verification_mode=certificate
+     - xpack.license.self_generated.type=${LICENSE}
+   mem_limit: ${ES_MEM_LIMIT}
+   ulimits:
+     memlock:
+       soft: -1
+       hard: -1
+   healthcheck:
+     test:
+       [
+         "CMD-SHELL",
+         "curl -s --cacert config/certs/ca/ca.crt http://localhost:9200 | grep -q 'missing authentication credentials'",
+       ]
+     interval: 10s
+     timeout: 10s
+     retries: 120
+
+  kibana:
+   depends_on:
+     es01:
+       condition: service_healthy
+   image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+   profiles: [agent, filebeat]
+   hostname: kibana
+   #container_name: kibana
+   labels:
+     co.elastic.logs/module: kibana
+   volumes:
+     - certs:/usr/share/kibana/config/certs
+     - kibanadata:/usr/share/kibana/data
+     - ./config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+   ports:
+     - ${KIBANA_PORT}:5601
+   environment:
+     - SERVERNAME=kibana
+     - ELASTICSEARCH_HOSTS=http://es01:9200
+     - ELASTICSEARCH_USERNAME=kibana_system
+     #- ELASTICSEARCH_SSL_VERIFICATIONMODE=none
+     - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+#     - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+     - XPACK_SECURITY_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+     - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+     - XPACK_REPORTING_ENCRYPTIONKEY=${ENCRYPTION_KEY}
+     - XPACK_REPORTING_KIBANASERVER_HOSTNAME=localhost
+     - SERVER_SSL_ENABLED=false
+#     - SERVER_SSL_CERTIFICATE=config/certs/kibana/kibana.crt
+#     - SERVER_SSL_KEY=config/certs/kibana/kibana.key
+#     - SERVER_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+     #- ELASTIC_APM_SECRET_TOKEN=${ELASTIC_APM_SECRET_TOKEN}
+   mem_limit: ${KB_MEM_LIMIT}
+   healthcheck:
+     test:
+       [
+         "CMD-SHELL",
+         "curl -s -I --cacert config/certs/ca/ca.crt http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+       ]
+     interval: 10s
+     timeout: 10s
+     retries: 120
+
+# docker run -d \
+#   --name=metricbeat \
+#   --user=root \
+#   --volume="/var/run/docker.sock:/var/run/docker.sock:ro" \
+#   --volume="/var/lib/docker/containers:/var/lib/docker/containers:ro" \
+#   docker.elastic.co/beats/metricbeat:latest metricbeat -e \
+#   -E output.elasticsearch.hosts=["elasticsearch:9200"]
+
+  # Second newest way to get log data from containers: We configure filebeat to automatically grab log output of all docker containers.
+  filebeat01:
+    depends_on:
+      es01:
+        condition: service_healthy
+    profiles: [filebeat]
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
+    hostname: filebeat01
+    user: root
+    volumes:
+      - certs:/usr/share/filebeat/certs
+      - filebeatdata01:/usr/share/filebeat/data
+      #- "./filebeat_ingest_data/:/usr/share/filebeat/ingest_data/"
+      - "./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    environment:
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTICSEARCH_HOST=http://es01:9200
+      - KIBANA_HOSTS=http://kibana:5601
+      - ELASTICSEARCH_CA=/usr/share/metricbeat/certs/ca/ca.crt
+      - KIBANA_HOST=http://kibana:5601
+      - KIBANA_USERNAME=elastic
+      - KIBANA_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_CA=/usr/share/metricbeat/certs/ca/ca.crt
+    command: --strict.perms=false -e
+
+  # Docker container for running the configured fleet agent. The agent will capture docker logs
+  fleet-server:
+    depends_on:
+      kibana:
+        condition: service_healthy
+      es01:
+        condition: service_healthy
+    profiles: [agent]
+    image: docker.elastic.co/beats/elastic-agent:${STACK_VERSION}
+    volumes:
+      #- "certs:/certs"
+      - "fleetserverdata:/usr/share/elastic-agent"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro"
+      - "/proc:/hostfs/proc:ro"
+      - "/:/hostfs:ro"
+    ports:
+      - ${FLEET_PORT}:8220
+      #- ${APMSERVER_PORT}:8200
+    user: root
+    environment:
+      #- SSL_CERTIFICATE_AUTHORITIES=/certs/ca/ca.crt
+      #- CERTIFICATE_AUTHORITIES=/certs/ca/ca.crt
+      #- FLEET_CA=/certs/ca/ca.crt
+      - FLEET_ENROLL=1
+      - FLEET_INSECURE=true
+      #- FLEET_SERVER_ELASTICSEARCH_CA=/certs/ca/ca.crt
+      - FLEET_SERVER_ELASTICSEARCH_HOST=http://es01:9200
+      - FLEET_SERVER_ELASTICSEARCH_INSECURE=true
+      - FLEET_SERVER_ENABLE=1
+      #- FLEET_SERVER_CERT=/certs/fleet-server/fleet-server.crt
+      #- FLEET_SERVER_CERT_KEY=/certs/fleet-server/fleet-server.key
+      - FLEET_SERVER_INSECURE_HTTP=true
+      - FLEET_SERVER_POLICY_ID=fleet-server-policy
+      - FLEET_URL=http://fleet-server:8220
+      #- KIBANA_FLEET_CA=/certs/ca/ca.crt
+      - KIBANA_FLEET_SETUP=1
+      - KIBANA_FLEET_USERNAME=elastic
+      - KIBANA_FLEET_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_HOST=http://kibana:5601
+
+  # metricbeat01:
+  #   depends_on:
+  #    es01:
+  #      condition: service_healthy
+  #   profiles: [metricbeat]
+  #   #image: docker.elastic.co/beats/metricbeat:${STACK_VERSION}
+  #   image: docker.elastic.co/beats/metricbeat:latest
+  #   hostname: metricbeat01
+  #   user: root
+  #   volumes:
+  #     #- "certs:/etc/clients/certs"
+  #     - "certs:/usr/share/metricbeat/certs"
+  #     - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+  #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  #     - "./config/metricbeat.docker.yml:/usr/share/metricbeat/metricbeat.yml:ro"
+  #   environment:
+  #     - ELASTIC_USER=elastic
+  #     - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+  #     - ELASTIC_HOSTS=https://es01:9200
+  #     - KIBANA_HOSTS=http://kibana:5601
+  #     - setup.kibana.host=kibana:5601
+  #     - output.elasticsearch.hosts=["https://es01:9200"]
+  #   command: --strict.perms=false -e
+
+  # # Second newest way to get log data from containers: We configure filebeat to automatically grab log output of all docker containers.
+  # filebeat01:
+  #   depends_on:
+  #     es01:
+  #       condition: service_healthy
+  #   profiles: [filebeat]
+  #   image: docker.elastic.co/beats/filebeat:${STACK_VERSION}
+  #   hostname: filebeat01
+  #   user: root
+  #   volumes:
+  #     - certs:/usr/share/filebeat/certs
+  #     - filebeatdata01:/usr/share/filebeat/data
+  #     #- "./filebeat_ingest_data/:/usr/share/filebeat/ingest_data/"
+  #     - "./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
+  #     - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+  #     - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  #   environment:
+  #     - ELASTIC_USER=elastic
+  #     - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+  #     - ELASTIC_HOSTS=https://es01:9200
+  #     - KIBANA_HOSTS=http://kibana:5601
+  #   # - LOGSTASH_HOSTS=http://logstash01:9600
+  #   command: --strict.perms=false -e
+
+# Oldest variant for getting log data: Logstash
+  # logstash01:
+  #  depends_on:
+  #    es01:
+  #      condition: service_healthy
+  #    kibana:
+  #      condition: service_healthy
+  #  image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+  #  hostname: logstash01
+  #  labels:
+  #    co.elastic.logs/module: logstash
+  #  user: root
+  #  volumes:
+  #    - certs:/usr/share/logstash/certs
+  #    - logstashdata01:/usr/share/logstash/data
+  #    - "./logstash_ingest_data/:/usr/share/logstash/ingest_data/"
+  #    - "./config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro"
+  #  environment:
+  #    - xpack.monitoring.enabled=false
+  #    - ELASTIC_USER=elastic
+  #    - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+  #    - ELASTIC_HOSTS=https://es01:9200
+
+volumes:
+  data-zookeeper-log-1:
+    driver: local
+  data-zookeeper-data-1:
+    driver: local
+  data-zookeeper-log-2:
+    driver: local
+  data-zookeeper-data-2:
+    driver: local
+  data-zookeeper-log-3:
+    driver: local
+  data-zookeeper-data-3:
+    driver: local
+  certs:
+    driver: local
+  esdata01:
+    driver: local
+  kibanadata:
+    driver: local
+  metricbeatdata01:
+    driver: local
+  filebeatdata01:
+    driver: local
+  logstashdata01:
+    driver: local
+  fleetserverdata:
+    driver: local
