@@ -34,6 +34,13 @@ spec:
       clusterRef:
         name: kraftcontroller
   dataVolumeCapacity: 10Gi
+  listeners:
+    external:
+      externalAccess:
+        type: staticForPortBasedRouting
+        staticForPortBasedRouting:
+          portOffset: 9093
+          host: kafka
   configOverrides:
     server:
       - "confluent.license.topic.replication.factor=1"
@@ -208,36 +215,6 @@ spec:
       runAsUser: 1000
       runAsNonRoot: true
 ---
-apiVersion: traefik.io/v1alpha1
-kind: IngressRouteTCP
-metadata:
-  name: kafka
-  namespace: confluent
-spec:
-  entryPoints:
-    - kafka
-  routes:
-  - match: HostSNI(`*`)
-    priority: 1
-    services:
-    - name: kafka
-      port: 9092
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRouteTCP
-metadata:
-  name: schemaregistry
-  namespace: confluent
-spec:
-  entryPoints:
-    - schemaregistry
-  routes:
-  - match: HostSNI(`*`)
-    priority: 1
-    services:
-    - name: schemaregistry
-      port: 8081
----
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -258,3 +235,58 @@ spec:
             name: controlcenter
             port:
               number: 9021
+---
+# Schema Registry
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: schemaregistry
+  namespace: confluent
+  annotations:
+    kubernetes.io/ingress.classname: "traefik"
+    traefik.ingress.kubernetes.io/router.entrypoints: schemaregistry
+spec:
+  rules:
+  - host: schemaregistry
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: schemaregistry
+            port:
+              number: 8081
+---
+# Bootstrap server
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: kafka
+  namespace: confluent
+spec:
+  entryPoints:
+    - kafkabootstrap
+  routes:
+  - match: HostSNI(`*`)
+    priority: 1
+    services:
+    - name: kafka
+      port: 9092
+---
+# The single broker.
+# Note: From the outside, this broker is reachable via port 9093 (see traefik config). But internally, it uses port 9092!
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: kafka-broker1
+  namespace: confluent
+spec:
+  entryPoints:
+    - kafkabroker1
+  routes:
+  - match: HostSNI(`*`)
+    priority: 1
+    services:
+    - name: kafka
+      port: 9092
