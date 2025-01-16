@@ -1,0 +1,21 @@
+# Flink
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cmf-service
+  namespace: flink
+  annotations:
+    kubernetes.io/ingress.classname: "traefik"
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: flink
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cmf-service
+            port:
+              number: 80
