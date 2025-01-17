@@ -290,3 +290,25 @@ spec:
     services:
     - name: kafka
       port: 9092
+---
+# Metadata service (mds)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mds
+  namespace: confluent
+  annotations:
+    kubernetes.io/ingress.classname: "traefik"
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: mds
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kafka
+            port:
+              number: 8090

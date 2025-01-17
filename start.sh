@@ -24,11 +24,15 @@ helm upgrade -n traefik --create-namespace --install traefik traefik/traefik -f 
 kubectl create namespace confluent
 kubectl config set-context --current --namespace confluent
 
-# Add the Confluent repo to the helm package manager and update it
+# Configure bearer access to the Confluent Platform Metadata Service with username "kafka", password "kafka":
+kubectl create secret generic c3-mds-client \
+  --from-file=bearer.txt=confluent/platform/mds-credentials.txt \
+  --namespace confluent
 
 # Install the operator of Confluent for Kubernetes
 
 helm upgrade --install confluent-operator confluentinc/confluent-for-kubernetes
+# Install a CP cluster
 kubectl apply -f confluent/platform/confluent-platform.yaml
 
 # Install cert-manager

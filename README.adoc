@@ -86,8 +86,8 @@ kubectl get pods
 You can run kafka commands locally as usual. Please make sure to have these lines in your /etc/hosts file, though:
 
 ```shell
-127.0.0.1   kafka schemaregistry flink
-::1         kafka schemaregistry flink
+127.0.0.1   kafka mds schemaregistry flink
+::1         kafka mds schemaregistry flink
 ```
 
 Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
