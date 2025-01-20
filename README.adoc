@@ -112,6 +112,48 @@ kafka-metadata-quorum --bootstrap-server kafka:9092 describe --status
 You can connect to control center with your browser via http://control-center/ (make sure you have deleted the HTTP test described above).
 
 
+=== Flink Applications
+
+In the following, a few example applications are deployed.
+
+You can list the existing Flink environments like this:
+
+```shell
+confluent flink environment list --url http://flink
+```
+
+The applications in an existing environment can be listed like this:
+
+```shell
+confluent flink application list --environment env1 --url http://flink
+```
+
+==== Basic Example
+
+Create environment:
+
+```shell
+confluent flink environment create env1 --url http://flink:80 --kubernetes-namespace flink
+```
+
+Create basic demo application:
+
+```shell
+confluent flink application create flink/application-basic-example.json --environment env1 --url http://flink:80
+```
+
+After a while, the webui for monitoring the Flink application can be made available on http://localhost:8090 like this:
+
+```shell
+confluent flink application web-ui-forward basic-example --environment env1 --port 8090 --url http://flink
+```
+
+Delete the application:
+
+```shell
+confluent flink application delete basic-example --environment env1 --url http://flink
+```
+
 == Debugging the Setup
 
 === Traefik

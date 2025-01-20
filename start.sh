@@ -44,9 +44,17 @@ helm upgrade --install \
   --set crds.enabled=true
 
 # Install the Confluent Platform for Apache Flink Kubernetes operator
-helm upgrade -n flink-operator --create-namespace --install cp-flink-kubernetes-operator confluentinc/flink-kubernetes-operator
+kubectl create namespace flink
+helm upgrade -n flink-operator --create-namespace --install cp-flink-kubernetes-operator \
+confluentinc/flink-kubernetes-operator -f kubernetes/k8s-flink-kubernetes-operator.yaml
 
 # Install Confluent Manger for Apache Flink
 helm upgrade --create-namespace --install cmf \
 confluentinc/confluent-manager-for-apache-flink \
---namespace flink
+--namespace flink -f kubernetes/k8s-confluent-manager-for-apache-flink.yaml
+
+# Create a service account for managing flink resources
+#kubectl -n flink create serviceaccount flink-service-account
+#kubectl create clusterrolebinding flink-role-binding-flink --clusterrole=edit --serviceaccount=default:flink-service-account
+
+kubectl -n flink apply -f kubernetes/k8s-flink-ingress.yaml
