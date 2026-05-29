@@ -4,23 +4,23 @@ ports:
   web:
     hostPort: 80
   websecure:
-    enabled: false
-    hostPort: 443
-  kafkabootstrap:
+    expose:
+      enabled: false
+  kafka:
     port: 9092
     hostPort: 9092
-    protocol: TCP
-    expose:
-      default: true
-  kafkabroker1:
-    port: 9093
-    hostPort: 9093
     protocol: TCP
     expose:
       default: true
   schemaregistry:
     port: 8081
     hostPort: 8081
+    protocol: TCP
+    expose:
+      default: true
+  controlcenter:
+    port: 9021
+    hostPort: 9021
     protocol: TCP
     expose:
       default: true

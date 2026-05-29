@@ -13,99 +13,37 @@ You need to have the following software installed:
 
 == Setting up the infrastructure
 
-=== Setting up a kubernetes cluster
+Run the `start.sh` script.
 
-Create the kubernetes cluster in docker using this command:
-
-```shell
-kind create cluster
-```
-
-You can check your cluster by running:
-
-```shell
-kubectl cluster-info --context kind-kind
-```
-
-==== Testing the basic infrastructure with a simple web application
-
-You can install a basic web application for testing the infrastructure:
-
-```shell
-kubectl create namespace test
-kubectl create -n test configmap hello-world --from-file kubernetes/test/index.html
-kubectl apply -f kubernetes/test/hello-world.yaml
-```
-
-Now you should be able to access a simple website using e.g. curl:
-
-```shell
-curl localhost:80
-```
-
-Remove the test application by deleting the namespace:
-
-```shell
-kubectl delete namespace test
-```
-
-
-=== Installing Confluent Platform (KRaft mode)
-The next steps are taken from the official documentation for Confluent.
-
-Create a namespace `confluent` and set is as the default namespace.
-
-```shell
-kubectl create namespace confluent
-kubectl config set-context --current --namespace confluent
-```
-
-Configure the `helm` package manager.
-
-```shell
-helm repo add confluentinc https://packages.confluent.io/helm
-helm repo update
-```
-
-
-Install Confluent for Kubernetes:
-
-```shell
-helm upgrade --install confluent-operator confluentinc/confluent-for-kubernetes
-```
-
-List the pods:
-
-```shell
+```console
 kubectl get pods
 ```
-
 
 == Usage
 
 You can run kafka commands locally as usual. Please make sure to have these lines in your /etc/hosts file, though:
 
-```shell
+```console
 127.0.0.1   kafka mds schemaregistry flink
 ::1         kafka mds schemaregistry flink
 ```
 
 Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
 
-```shell
-kubectl run kafka-cli -i --tty --image=docker.io/confluentinc/cp-server:7.8.0 -
+```console
+kubectl run kafka-cli -i --tty --image=docker.io/confluentinc/cp-server:8.2.1 -
 -restart=Never --rm -- bash
 ```
 
 List topics as usual:
 
-```shell
+```console
 kafka-topics --bootstrap-server kafka:9092 --list
 ```
 
 Check the status of the KRaft controller:
 
-```shell
+```console
 kafka-metadata-quorum --bootstrap-server kafka:9092 describe --status
 ```
 
@@ -118,13 +56,13 @@ In the following, a few example applications are deployed.
 
 You can list the existing Flink environments like this:
 
-```shell
+```console
 confluent flink environment list --url http://flink
 ```
 
 The applications in an existing environment can be listed like this:
 
-```shell
+```console
 confluent flink application list --environment env1 --url http://flink
 ```
 
@@ -132,25 +70,25 @@ confluent flink application list --environment env1 --url http://flink
 
 Create environment:
 
-```shell
+```console
 confluent flink environment create env1 --url http://flink:80 --kubernetes-namespace flink
 ```
 
 Create basic demo application:
 
-```shell
+```console
 confluent flink application create flink/application-basic-example.json --environment env1 --url http://flink:80
 ```
 
 After a while, the webui for monitoring the Flink application can be made available on http://localhost:8090 like this:
 
-```shell
+```console
 confluent flink application web-ui-forward basic-example --environment env1 --port 8090 --url http://flink
 ```
 
 Delete the application:
 
-```shell
+```console
 confluent flink application delete basic-example --environment env1 --url http://flink
 ```
 
@@ -164,6 +102,6 @@ You can access the dashboard here: http://traefik/
 
 == Shutting down your resources
 
-```shell
+```console
 kind delete cluster
 ```
