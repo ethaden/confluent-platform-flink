@@ -11,6 +11,18 @@ You need to have the following software installed:
 * kubectl: Depends on your platform
 * helm: https://helm.sh/
 
+This setup instanciates some heavy components using quite a lot of memory and cpu. We recommend using a node with lots of RAM and multiple (virtual) cores.
+
+Once the cluster is up and running, you can check the status of the kubernetes single node (which runs in docker) like this:
+
+```console
+kubectl describe nodes | grep -E "(Name:|Resource|memory)"
+kubectl describe nodes | grep -E "(Name:|Resource|cpu)"
+```
+
+Recommendation: Use 8 cores and at least 32 GiB of RAM.
+Alternatively, you can just run a f subset of the available components.
+
 == Setting up the infrastructure
 
 Run the `start.sh` script.
@@ -24,8 +36,8 @@ kubectl get pods
 You can run kafka commands locally as usual. Please make sure to have these lines in your /etc/hosts file, though:
 
 ```console
-127.0.0.1   kafka mds schemaregistry flink
-::1         kafka mds schemaregistry flink
+127.0.0.1   kafka mds schemaregistry flink controlcenter ksqldb
+::1         kafka mds schemaregistry flink controlcenter ksqldb
 ```
 
 Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
@@ -47,8 +59,10 @@ Check the status of the KRaft controller:
 kafka-metadata-quorum --bootstrap-server kafka:9092 describe --status
 ```
 
-You can connect to control center with your browser via http://control-center/ (make sure you have deleted the HTTP test described above).
+You can connect to control center with your browser via (make sure you have deleted the HTTP test described above):
 
+* http://controlcenter/ (this makes use of SNI, make sure you have updated your `/etc/hosts`), or
+* http://localhost:9021/ (direct TCP connection to control center, no SNI)
 
 === Flink Applications
 
@@ -65,6 +79,8 @@ The applications in an existing environment can be listed like this:
 ```console
 confluent flink application list --environment env1 --url http://flink
 ```
+
+Note: Flink is integrated in Control Center: http://controlcenter
 
 ==== Basic Example
 
@@ -90,6 +106,42 @@ Delete the application:
 
 ```console
 confluent flink application delete basic-example --environment env1 --url http://flink
+```
+
+=== ksqlDB
+
+Create a topic called `orders` using Confluent Cloud Console.
+
+Produce some automatically generated messages to that topic.
+
+Open a ksqlDB terminal, either in Confluent Control Center, or using this command:
+
+```console
+kubectl exec -ti ksqldb-0 -- ksql
+```
+
+In ksqlDB, you first need to register a stream for that topic:
+
+```console
+CREATE STREAM orders (
+  ordertime BIGINT,
+  orderid   INT,
+  itemid    STRING,
+  address   STRUCT<
+    city STRING,
+    state STRING,
+    zipcode INT
+  >
+) WITH (
+  KAFKA_TOPIC = 'orders',
+  VALUE_FORMAT = 'JSON'
+);
+```
+
+Then you can query the stream:
+
+```console
+SELECT * FROM orders EMIT CHANGES;
 ```
 
 == Debugging the Setup

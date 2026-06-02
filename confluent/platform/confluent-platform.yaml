@@ -43,9 +43,25 @@ spec:
       - "confluent.balancer.topic.replication.factor=1"
       - "confluent.security.event.logger.exporter.kafka.topic.replicas=1"
       - "event.logger.exporter.kafka.topic.replicas=1"
+      - "confluent.cluster.link.metadata.topic.replication.factor=1"
+      - "share.coordinator.state.topic.replication.factor=1"
+      - "quotas.topic.replication.factor=1"
       - "offsets.topic.replication.factor=1"
+      - "confluent.durability.topic.replication.factor=1"
+      - "confluent.balancer.enable=false"
       - "confluent.cluster.link.enable=true"
+      - "metric.reporters=io.confluent.telemetry.reporter.TelemetryReporter"
+      - "confluent.telemetry.enabled=true"
       - "password.encoder.secret=secret"
+      - "confluent.telemetry.exporter._c3.enabled=true"
+      - "confluent.telemetry.exporter._c3.type=http"
+      - "confluent.telemetry.exporter._c3.client.base.url=http://controlcenter:9090/api/v1/otlp"
+      - "confluent.telemetry.exporter._c3.client.compression=gzip"
+      #- "confluent.telemetry.exporter._c3.api.key=dummy"
+      #- "confluent.telemetry.exporter._c3.api.secret=dummy"
+      - "confluent.telemetry.metrics.collector.interval.ms=60000"
+      - "confluent.telemetry.remoteconfig._confluent.enabled=false"
+      - "confluent.consumer.lag.emitter.enabled=true"
   podTemplate:
     resources:
       requests:
@@ -101,6 +117,8 @@ spec:
   dataVolumeCapacity: 10Gi
   internalTopicReplicationFactor: 1
   dependencies:
+    kafka:
+      bootstrapEndpoint: kafka.confluent.svc.cluster.local:9092
     schemaRegistry:
       url: http://schemaregistry.confluent.svc.cluster.local:8081
   podTemplate:
@@ -131,10 +149,14 @@ spec:
   dataVolumeCapacity: 10Gi
   configOverrides:
     server:
-      - confluent.controlcenter.command.topic.replication=1
-      - confluent.controlcenter.internal.topics.replication=1
-      - confluent.metrics.topic.replication=1
-      - confluent.monitoring.interceptor.topic.replication=1
+      - "confluent.controlcenter.command.topic.replication=1"
+      - "confluent.controlcenter.internal.topics.replication=1"
+      - "confluent.metrics.topic.replication=1"
+      - "confluent.monitoring.interceptor.topic.replication=1"
+      - "confluent.controlcenter.telemetry.enabled=true"
+      - "confluent.controlcenter.ksql.ksqldb.advertised.url=http://ksqldb"
+      - "confluent.controlcenter.cmf.enable=true"
+      - "confluent.controlcenter.cmf.url=http://cmf-service.flink.svc.cluster.local"
       #- confluent.controlcenter.replication.factor=1
       #- confluent.metrics.reporter.topic.replicas=1
   dependencies:
@@ -203,27 +225,6 @@ spec:
       runAsUser: 1000
       runAsNonRoot: true
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: kafka
-  namespace: confluent
-  annotations:
-    kubernetes.io/ingress.classname: "traefik"
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-spec:
-  rules:
-  - host: controlcenter
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: controlcenter
-            port:
-              number: 9021
----
 # Schema Registry
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -245,6 +246,28 @@ spec:
             name: schemaregistry
             port:
               number: 8081
+---
+# ksqlDB
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ksqldb
+  namespace: confluent
+  annotations:
+    kubernetes.io/ingress.classname: "traefik"
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: ksqldb
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ksqldb
+            port:
+              number: 8088
 ---
 # Bootstrap server + broker
 apiVersion: traefik.io/v1alpha1
@@ -284,10 +307,11 @@ spec:
             port:
               number: 8090
 ---
+# Control center via SNI on http://controlcenter on Port 80 (create alias in /etc/hosts from "controlcenter" to 127.0.0.1)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: controlcenter
+  name: kafka
   namespace: confluent
   annotations:
     kubernetes.io/ingress.classname: "traefik"
@@ -304,3 +328,19 @@ spec:
             name: controlcenter
             port:
               number: 9021
+---
+# Control center directly through port 9021
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: kafka
+  namespace: confluent
+spec:
+  entryPoints:
+    - controlcenter
+  routes:
+  - match: HostSNI(`*`)
+    priority: 1
+    services:
+    - name: controlcenter
+      port: 9021

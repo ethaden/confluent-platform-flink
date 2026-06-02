@@ -40,7 +40,7 @@ helm upgrade --install \
   cert-manager jetstack/cert-manager \
   --namespace cert-manager \
   --create-namespace \
-  --version v1.16.2 \
+  --version v1.20.2 \
   --set crds.enabled=true
 
 # Install the Confluent Platform for Apache Flink Kubernetes operator
@@ -48,9 +48,9 @@ kubectl create namespace flink
 helm upgrade -n flink-operator --create-namespace --install cp-flink-kubernetes-operator \
 confluentinc/flink-kubernetes-operator -f kubernetes/k8s-flink-kubernetes-operator.yaml
 
-# Install Confluent Manger for Apache Flink
+# Install Confluent Manger for Apache Flink (using version 2.3.0 due to an issue with 2.3.1)
 helm upgrade --create-namespace --install cmf \
-confluentinc/confluent-manager-for-apache-flink \
+confluentinc/confluent-manager-for-apache-flink --version 2.3.0 \
 --namespace flink -f kubernetes/k8s-confluent-manager-for-apache-flink.yaml
 
 # Create a service account for managing flink resources
