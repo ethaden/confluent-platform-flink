@@ -64,6 +64,18 @@ You can connect to control center with your browser via (make sure you have dele
 * http://controlcenter/ (this makes use of SNI, make sure you have updated your `/etc/hosts`), or
 * http://localhost:9021/ (direct TCP connection to control center, no SNI)
 
+=== Kafka connect
+
+This demo consists of a Kafka Connect cluster which can download and use the Datagen Source Connector from the Confluent Hub.
+
+Create a topic `users` with default setting. Then head over to your Connect cluster and create a Datagen Source connector.
+Use `users` as value for the `kafka.topic` field and `users` as value for the `quickstart` field.
+
+Start the connect and watch the events being produced to the topic.
+
+For more options, please have a look at the documentation here: https://docs.confluent.io/cloud/current/connectors/cc-datagen-source.html
+
+
 === Flink Applications
 
 In the following, a few example applications are deployed.
