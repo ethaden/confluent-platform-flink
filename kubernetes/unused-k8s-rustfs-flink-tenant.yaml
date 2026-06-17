@@ -1,0 +1,34 @@
+apiVersion: ://rustfs.com
+kind: Tenant
+metadata:
+  name: flink-storage
+  namespace: rustfs-flink
+spec:
+  # The number of RustFS storage server pods in this tenant grid
+  replicas: 1
+  
+  # Admin Web Management Console and API credentials
+  secretRef:
+    name: rustfs-admin-secret
+    
+  # High-performance distributed grid layout configuration
+  image: quay.io/rustfs/rustfs:latest
+  
+  # Storage resource blueprint for erasure coding and persistence
+  volumeClaimTemplate:
+    metadata:
+      name: rustfs-data
+    spec:
+      #storageClassName: openebs-local # Use NVMe/fast storage class for best performance
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+          
+  # Exposure endpoints for S3 traffic and web dashboards
+  ingress:
+    enabled: true
+    className: "traefik"
+    apiFqdn: ://s3flink
+    consoleFqdn: ://s3flink

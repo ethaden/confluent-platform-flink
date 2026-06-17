@@ -36,8 +36,8 @@ kubectl get pods
 You can run kafka commands locally as usual. Please make sure to have these lines in your /etc/hosts file, though:
 
 ```console
-127.0.0.1   kafka mds schemaregistry flink controlcenter ksqldb
-::1         kafka mds schemaregistry flink controlcenter ksqldb
+127.0.0.1   kafka mds schemaregistry flink controlcenter ksqldb s3storage
+::1         kafka mds schemaregistry flink controlcenter ksqldb s3storage
 ```
 
 Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
@@ -155,6 +155,32 @@ Then you can query the stream:
 ```console
 SELECT * FROM orders EMIT CHANGES;
 ```
+
+== Flink
+
+You can access via Control Center or on the command line.
+
+Some resources have been pre-configured for you:
+
+* An environment as a container for your statements and applications
+* A compute pool for executing statements
+* A catalog pointing to the local Confluent Platform Schema Registry
+* A database representing the local Confluent Platform Kafka cluster
+
+Run a few statements for testing things:
+
+```sql
+show catalogs;
+```
+
+```sql
+show databases;
+```
+
+```sql
+show tables;
+```
+
 
 == Debugging the Setup
 

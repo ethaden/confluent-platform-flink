@@ -7,7 +7,7 @@ kind create cluster --config=kubernetes/kind-cluster.yaml
 
 # Initialize helm repos
 helm repo add traefik https://traefik.github.io/charts
-helm repo add minio-operator https://operator.min.io
+helm repo add rustfs https://rustfs.github.io/helm/
 helm repo add confluentinc https://packages.confluent.io/helm
 helm repo add jetstack https://charts.jetstack.io --force-update
 helm repo update
@@ -15,7 +15,10 @@ helm repo update
 # Alternative: Install traefik as ingress controller with Loadbalancer
 helm upgrade -n traefik --create-namespace --install traefik traefik/traefik -f kubernetes/k8s-traefik.yaml
 
-# Install minio operator
+# Install RustFS as minio is not maintained anymore
+helm upgrade -n rustfs --create-namespace --install rustfs rustfs/rustfs -f kubernetes/k8s-rustfs.yaml
+kubectl create namespace rustfs-flink
+kubectl -n rustfs-flink apply -f kubernetes/k8s-rustfs-flink-tenant.yaml
 #helm upgrade -n minio-operator --create-namespace --install minio-operator minio-operator/operator -f kubernetes/k8s-minio-operator.yaml
 # Install a minio tenant for flink
 #helm upgrade -n minio-flink --create-namespace --install  minio-flink minio-operator/tenant -f kubernetes/k8s-minio-flink.yaml
@@ -58,3 +61,16 @@ confluentinc/confluent-manager-for-apache-flink --version 2.3.0 \
 #kubectl create clusterrolebinding flink-role-binding-flink --clusterrole=edit --serviceaccount=default:flink-service-account
 
 kubectl -n flink apply -f kubernetes/k8s-flink-ingress.yaml
+
+kubectl create namespace flink-my-environment
+curl -H "Content-Type: application/json" \
+  -X POST http://flink/cmf/api/v1/environments \
+  -d@kubernetes/rest-flink-my-environment.json
+
+curl -H "Content-Type: application/json" \
+  -X POST http://flink/cmf/api/v1/catalogs/kafka \
+  -d@kubernetes/rest-flink-my-catalog.json
+
+curl -H "Content-Type: application/json" \
+  -X POST http://flink/cmf/api/v1/catalogs/kafka/my-kafka-catalog/databases \
+  -d@kubernetes/rest-flink-my-database.json

@@ -1,0 +1,49 @@
+{
+    "name": "my-environment",
+    "kubernetesNamespace": "flink-my-environment",
+    "kubernetesClusterName": "default-k8s-cluster",
+    "flinkApplicationDefaults": {
+        "spec": {
+            "flinkConfiguration": {
+                "taskmanager.numberOfTaskSlots": "2"
+            },
+            "jobManager": {
+                "resource": {
+                    "memory": "1024m",
+                    "cpu": 0.5
+                }
+            },
+            "taskManager": {
+                "resource": {
+                    "memory": "2048m",
+                    "cpu": "1.5"
+                }
+            }
+        }
+    },
+    "computePoolDefaults": {
+        "clusterSpec": {
+            "image": "confluentinc/cp-flink-sql:1.19-cp8",
+            "flinkVersion": "v1_19",
+            "jobManager": {
+                "resource": {
+                    "memory": "1024m",
+                    "cpu": "1500m"
+                }
+            },
+            "taskManager": {
+                "resource": {
+                    "memory": "2048m",
+                    "cpu": "400m"
+                }
+            }
+        }
+    },
+    "statementDefaults": {
+        "detached": {
+            "flinkConfiguration": {
+                "state.backend.type": "rocksdb"
+            }
+        }
+    }
+}

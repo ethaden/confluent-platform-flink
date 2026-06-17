@@ -1,0 +1,39 @@
+replicaCount: 1
+
+mode:
+  standalone:
+    enabled: true
+  distributed:
+    enabled: false
+
+secret:
+  rustfs:
+    access_key: admin
+    secret_key: admin
+
+config:
+  # Enable the MinIO compatibility layer in RustFS
+  #s3CompatibilityMode: "minio"
+  consoleEnabled: true
+
+storageclass:
+  name: standard
+
+ingress:
+  enabled: true
+  className: "traefik"
+  hosts:
+    - host: s3storage
+      paths:
+        - path: /
+          pathType: Prefix
+
+service:
+  type: ClusterIP
+  ports:
+    s3Api:
+      port: 9000
+      targetPort: 9000
+    console:
+      port: 9001
+      targetPort: 9001
