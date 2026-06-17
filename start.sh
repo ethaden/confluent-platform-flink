@@ -63,14 +63,45 @@ confluentinc/confluent-manager-for-apache-flink --version 2.3.0 \
 kubectl -n flink apply -f kubernetes/k8s-flink-ingress.yaml
 
 kubectl create namespace flink-my-environment
-curl -H "Content-Type: application/json" \
-  -X POST http://flink/cmf/api/v1/environments \
-  -d@kubernetes/rest-flink-my-environment.json
+# We need to wait until Flink is available...
+URL="http://flink"
+TIMEOUT_SECS=300
+INTERVAL_SECS=5
 
-curl -H "Content-Type: application/json" \
-  -X POST http://flink/cmf/api/v1/catalogs/kafka \
-  -d@kubernetes/rest-flink-my-catalog.json
+# Calculate expiration time
+END_TIME=$((SECONDS + TIMEOUT_SECS))
 
-curl -H "Content-Type: application/json" \
-  -X POST http://flink/cmf/api/v1/catalogs/kafka/my-kafka-catalog/databases \
-  -d@kubernetes/rest-flink-my-database.json
+echo "Polling $URL for up to ${TIMEOUT_SECS}s..."
+
+while [ $SECONDS -lt $END_TIME ]; do
+    # Fetch HTTP status code only
+    STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+    
+    # Exit loop if status is anything other than 503
+    if [ "$STATUS" != "503" -a "$STATUS" != "404" ]; then
+        echo "Finished waiting. Final status code: $STATUS"
+        curl -H "Content-Type: application/json" \
+          -X POST http://flink/cmf/api/v1/environments \
+          -d@kubernetes/rest-flink-my-environment.json
+
+        curl -v -H "Content-Type: application/json" \
+        -X POST http://flink/cmf/api/v1/environments/my-environment/compute-pools \
+        -d@kubernetes/rest-flink-my-compute-pool.json
+        
+        curl -H "Content-Type: application/json" \
+          -X POST http://flink/cmf/api/v1/catalogs/kafka \
+          -d@kubernetes/rest-flink-my-catalog.json
+
+        curl -H "Content-Type: application/json" \
+          -X POST http://flink/cmf/api/v1/catalogs/kafka/my-kafka-catalog/databases \
+          -d@kubernetes/rest-flink-my-database.json
+
+        exit 0
+    fi
+    
+    echo "Received 503. Retrying in ${INTERVAL_SECS}s..."
+    sleep "$INTERVAL_SECS"
+done
+
+echo "Error: Timeout reached before endpoint recovered."
+exit 1
