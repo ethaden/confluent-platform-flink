@@ -64,7 +64,7 @@ kubectl -n flink apply -f kubernetes/k8s-flink-ingress.yaml
 
 kubectl create namespace flink-my-environment
 # We need to wait until Flink is available...
-URL="http://flink"
+URL="http://flink/cmf/api/v1/environments"
 TIMEOUT_SECS=300
 INTERVAL_SECS=5
 
@@ -99,7 +99,7 @@ while [ $SECONDS -lt $END_TIME ]; do
         exit 0
     fi
     
-    echo "Received 503. Retrying in ${INTERVAL_SECS}s..."
+    echo "Waiting for Confluent Manager for Apache Flink (received $STATUS). Retrying in ${INTERVAL_SECS}s..."
     sleep "$INTERVAL_SECS"
 done
 
