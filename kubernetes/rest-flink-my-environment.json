@@ -1,5 +1,5 @@
 {
-    "name": "my-environment",
+    "name": "myenv",
     "kubernetesNamespace": "flink-my-environment",
     "kubernetesClusterName": "default-k8s-cluster",
     "flinkApplicationDefaults": {

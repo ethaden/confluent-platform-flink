@@ -1,0 +1,21 @@
+= Using a Nexus instance as image cache
+
+```console
+docker compose up -d
+```
+
+Retrieve the initally created admin password:
+
+```console
+export NEXUS_ADMIN_PASS=$(docker compose exec nexus cat /nexus-data/admin.password)
+echo $NEXUS_ADMIN_PASS
+```
+
+Open http://localhost:18081 and log in as `admin` with the retrieved password. Change the password (you can stick the auto-generated one by just "changing" to it).
+Make sure to allow anonymous access.
+
+```console
+export NEXUS_ADMIN_PASS=<your-new-nexus-admin-password>
+./configure-hubs.sh
+```
+

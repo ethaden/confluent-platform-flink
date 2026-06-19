@@ -3,3 +3,4 @@
 .env
 extract-log-files/.env
 extract-log-files/.venv
+nexus-admin-pass.txt

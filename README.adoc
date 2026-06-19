@@ -10,6 +10,11 @@ You need to have the following software installed:
 * kind: https://kind.sigs.k8s.io/
 * kubectl: Depends on your platform
 * helm: https://helm.sh/
+* confluent cli: https://docs.confluent.io/confluent-cli/current/install.html
+
+Additionally required packages to be installed via local distribution-specific package manager
+
+* curl
 
 This setup instanciates some heavy components using quite a lot of memory and cpu. We recommend using a node with lots of RAM and multiple (virtual) cores.
 
@@ -23,22 +28,29 @@ kubectl describe nodes | grep -E "(Name:|Resource|cpu)"
 Recommendation: Use 8 cores and at least 32 GiB of RAM.
 Alternatively, you can just run a f subset of the available components.
 
-== Setting up the infrastructure
-
-Run the `start.sh` script.
-
-```console
-kubectl get pods
-```
-
-== Usage
-
-You can run kafka commands locally as usual. Please make sure to have these lines in your /etc/hosts file, though:
+Please make sure to have these lines in your /etc/hosts file, though:
 
 ```console
 127.0.0.1   kafka mds schemaregistry flink controlcenter ksqldb s3storage
 ::1         kafka mds schemaregistry flink controlcenter ksqldb s3storage
 ```
+
+== Setting up the infrastructure
+
+Run the `./start.sh` script.
+
+```console
+kubectl get pods
+```
+
+=== If running in a restrictive environment
+
+If this setup needs to be used in a restricted environment where container images cannot be used directly but only through a proxy, please edit `start.sh` and enable the aliases pointing all requests to your enterprise image registry instead of the original sources.
+
+Make sure you have all images in that enterprise image repository.
+
+== Usage
+
 
 Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
 
@@ -79,6 +91,7 @@ For more options, please have a look at the documentation here: https://docs.con
 === Flink Applications
 
 In the following, a few example applications are deployed.
+Note, the `confluent` CLI works with both Confluent Cloud and Confluent Platform. If you are working in a hybrid setup where you have both, make sure to logout via `confluent logout` from Confluent Cloud before using the CLI for accessing Confluent Platform. The `--url` is mandatory when accessing Confluent Platform with the CLI.
 
 You can list the existing Flink environments like this:
 
@@ -89,35 +102,49 @@ confluent flink environment list --url http://flink
 The applications in an existing environment can be listed like this:
 
 ```console
-confluent flink application list --environment env1 --url http://flink
+confluent flink application list --environment myenv --url http://flink
 ```
 
 Note: Flink is integrated in Control Center: http://controlcenter
 
 ==== Basic Example
 
-Create environment:
+Create environment (this shouldn't be required as the script will create that environment for you automatically):
 
 ```console
-confluent flink environment create env1 --url http://flink:80 --kubernetes-namespace flink
+confluent flink environment create myenv --url http://flink --kubernetes-namespace flink
 ```
+
+===== Flink Interactive
+
+You can have an interactive Flink session using the `confluent` CLI. Just run:
+
+```console
+
+```
+
+
+
+===== Flink Statements
+
+===== Flink Application
 
 Create basic demo application:
 
 ```console
-confluent flink application create flink/application-basic-example.json --environment env1 --url http://flink:80
+confluent flink application create flink/application-basic-example.json --environment myenv --url http://flink
 ```
 
 After a while, the webui for monitoring the Flink application can be made available on http://localhost:8090 like this:
 
 ```console
-confluent flink application web-ui-forward basic-example --environment env1 --port 8090 --url http://flink
+confluent flink application web-ui-forward basic-example --environment myenv --port 8090 --url http://flink
 ```
 
 Delete the application:
 
 ```console
-confluent flink application delete basic-example --environment env1 --url http://flink
+confluent flink application delete basic-example --environment myenv --url http://flink
 ```
 
 === ksqlDB
@@ -183,6 +210,21 @@ show tables;
 
 
 == Debugging the Setup
+
+
+=== Identifying all used container images including their sources
+
+Run this command:
+
+```console
+kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec['initContainers', 'containers'][*].image}" |\
+tr -s '[[:space:]]' '\n' |\
+sort |\
+uniq -c
+```
+
+Note, that some sources do not start with a hostname. In these cases, the default hostname `docker.io` is used.
+
 
 === Traefik
 

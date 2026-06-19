@@ -1,0 +1,35 @@
+# This file is used only if all container images needs to be pulled from a local/enterprise mirror instead of pulling them directly
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+# Activate the path for the containerd registry configurations
+containerdConfigPatches:
+- |
+  [plugins."io.containerd.grpc.v1.cri".registry]
+    config_path = "/etc/containerd/certs.d"
+nodes:
+- role: control-plane  
+  # Mount local hosts.toml to the kind node
+  extraMounts:
+  - hostPath: ./custom-registry/certs.d
+    containerPath: /etc/containerd/certs.d
+    readOnly: true
+  extraPortMappings:
+  - containerPort: 80
+    hostPort: 80
+    protocol: TCP
+  - containerPort: 443
+    hostPort: 443
+    protocol: TCP
+  - containerPort: 9092
+    hostPort: 9092
+    protocol: TCP
+  - containerPort: 9093
+    hostPort: 9093
+    protocol: TCP
+  - containerPort: 8081
+    hostPort: 8081
+    protocol: TCP
+  - containerPort: 9021
+    hostPort: 9021
+    protocol: TCP

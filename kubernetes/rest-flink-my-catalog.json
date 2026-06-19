@@ -2,7 +2,7 @@
    "apiVersion": "cmf.confluent.io/v1",
    "kind": "KafkaCatalog",
    "metadata": {
-     "name": "my-kafka-catalog"
+     "name": "mycatalog"
    },
    "spec": {
      "srInstance": {

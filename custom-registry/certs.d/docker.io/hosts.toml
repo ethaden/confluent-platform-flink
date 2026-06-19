@@ -1,0 +1,5 @@
+server = "https://docker.io"
+
+[host."http://172.17.0.1:15001"]
+  capabilities = ["pull", "resolve"]
+  skip_verify = true
