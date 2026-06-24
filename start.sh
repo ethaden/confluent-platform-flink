@@ -1,8 +1,24 @@
 # Create a kubernetes cluster in Docker (using standard registries directly from the internet)
 kind create cluster --config=kubernetes/kind-cluster.yaml
 # Comment the previously line and uncomment the following if using a local container image mirror
-# Make sure to customize `hosts.tom` according to your setup
-#kind create cluster --config=kubernetes/kind-cluster-with-local-image-registry.yaml
+# We need to update two things: First, the `kind` command must pull its base image from the mirror.
+# This is done by explicitly stating the image with full path on the command line (see below `kind create cluster ...`).
+# Second, `kind` uses the internal service `containerd` for fetching images, by default directly from the internet.
+# We need to configure containerd to use the mirror instead. 
+# Make sure to customize `hosts.toml` files in `custom-registry/certs.d according to your setup
+# Each subfolder contains the settings for a specific container image domain (i.e. docker.io, quay.io and k8s.io).
+# In our example, we set up a mirror in the `custom-registry/docker-nexus-proxy` folder 
+# and make three separate repository mirrors available inside of docker,
+# One for each of the registries mentioned above.
+# These `hosts.toml` file configure the internal containerd instance which is included in `kind` such that all requests to the specified registries
+# are sent to the configured local mirrors instead. You need one mirror for each registry, i.e. docker.io, quay.io and k8s.io.
+# You can configure each of them to listen on a unique port.
+# NOTE: The base images used by kind (e.g. coredns) are included in kind directly. They are NOT pulled from the internet.
+
+# TODO: Please update the URL to point to your real container image mirror.
+# NOTE: In the next line we assume our image mirror (e.g. nexus) is listening for requests for images from docker.io on locahost, Port 15001
+#export KIND_MIRROR_IMAGE=localhost:15001/kindest/node:v1.35.0
+#kind create cluster --config=kubernetes/kind-cluster-with-local-image-registry.yaml --image $KIND_MIRROR_IMAGE
 
 # Install nginx as ingress controller
 #kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml

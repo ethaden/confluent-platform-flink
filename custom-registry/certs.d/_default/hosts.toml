@@ -1,5 +1,4 @@
-server = "https://registry.k8s.io"
-
-[host."http://172.17.0.1:15003"]
+[host."http://172.17.0.1:15001"]
   capabilities = ["pull", "resolve"]
+  plain-http = true
   skip_verify = true

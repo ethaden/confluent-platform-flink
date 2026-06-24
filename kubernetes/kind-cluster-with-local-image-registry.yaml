@@ -3,10 +3,14 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 
 # Activate the path for the containerd registry configurations
+# Please customize this setup and make sure to provide a dedicated endpoint for each "registry.k8s.io", "quay.io" and "docker.io" (note the different ports in the example)
 containerdConfigPatches:
-- |
-  [plugins."io.containerd.grpc.v1.cri".registry]
-    config_path = "/etc/containerd/certs.d"
+  - |
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
+  - |
+    [plugins."io.containerd.cri.v1.images".registry]
+      config_path = "/etc/containerd/certs.d"
 nodes:
 - role: control-plane  
   # Mount local hosts.toml to the kind node
