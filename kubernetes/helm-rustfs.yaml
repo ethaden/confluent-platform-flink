@@ -37,3 +37,11 @@ service:
     console:
       port: 9001
       targetPort: 9001
+
+image:
+  rustfs:
+    repository: docker.io/rustfs/rustfs
+  initImage:
+    repository: docker.io/busybox
+    # This pins the version to the current stable release
+    tag: "1.36"

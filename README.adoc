@@ -47,6 +47,13 @@ kubectl get pods
 
 If this setup needs to be used in a restricted environment where container images cannot be used directly but only through a proxy, please edit `start.sh` and enable the aliases pointing all requests to your enterprise image registry instead of the original sources.
 
+We need to distinguish two things: First, the `kind` cluster is bootstrapped by using an image called `kindest/node:v1.35.0` in docker. The version number might differ, please check by running `kind version`.
+
+When setting up kind initially, the image `kindest/node:v1.35.0` needs to be available in the container image mirror registry.
+
+Update the `start.sh`. file to 
+
+
 Make sure you have all images in that enterprise image repository.
 
 == Usage
@@ -222,6 +229,13 @@ tr -s '[[:space:]]' '\n' |\
 sort |\
 uniq -c
 ```
+
+If you just want the list of images, use this command:
+
+```console
+kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec['initContainers', 'containers'][*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c | awk '{print $2}'
+```
+
 
 Note, that some sources do not start with a hostname. In these cases, the default hostname `docker.io` is used.
 

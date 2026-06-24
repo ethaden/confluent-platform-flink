@@ -6,8 +6,8 @@ metadata:
 spec:
   dataVolumeCapacity: 10G
   image:
-    application: docker.io/confluentinc/cp-server:8.2.1
-    init: confluentinc/confluent-init-container:3.2.2
+    application: docker.io/confluentinc/cp-server:8.2.2
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
   replicas: 1
   podTemplate:
     resources:
@@ -27,8 +27,8 @@ metadata:
 spec:
   replicas: 1
   image:
-    application: confluentinc/cp-server:8.2.1
-    init: confluentinc/confluent-init-container:3.2.2
+    application: docker.io/confluentinc/cp-server:8.2.2
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
   dependencies:
     kRaftController:
       clusterRef:
@@ -82,8 +82,8 @@ metadata:
 spec:
   replicas: 1
   image:
-    application: confluentinc/cp-server-connect:8.2.1
-    init: confluentinc/confluent-init-container:3.2.2
+    application: docker.io/confluentinc/cp-server-connect:8.2.2
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
   configOverrides:
     server:
       - config.storage.replication.factor=1
@@ -106,8 +106,8 @@ spec:
   keyConverterType: io.confluent.connect.avro.AvroConverter
   valueConverterType: io.confluent.connect.avro.AvroConverter
   image:
-    application: docker.io/confluentinc/cp-server:8.2.1
-    init: confluentinc/confluent-init-container:3.2.2
+    application: docker.io/confluentinc/cp-server:8.2.2
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
   build:
     type: onDemand
     onDemand:
@@ -131,8 +131,8 @@ metadata:
 spec:
   replicas: 1
   image:
-    application: confluentinc/cp-ksqldb-server:8.2.1
-    init: confluentinc/confluent-init-container:3.2.2
+    application: docker.io/confluentinc/cp-ksqldb-server:8.2.2
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
   dataVolumeCapacity: 10Gi
   internalTopicReplicationFactor: 1
   dependencies:
@@ -163,8 +163,8 @@ metadata:
 spec:
   replicas: 1
   image:
-    application: confluentinc/cp-enterprise-control-center-next-gen:2.5.0
-    init: confluentinc/confluent-init-container:3.1.0
+    application: docker.io/confluentinc/cp-enterprise-control-center-next-gen:2.5.0
+    init: docker.io/confluentinc/confluent-init-container:3.1.0
   dataVolumeCapacity: 10Gi
   configOverrides:
     server:
@@ -195,11 +195,11 @@ spec:
       url: http://controlcenter.confluent.svc.cluster.local:9093
   services:
     prometheus:
-      image: confluentinc/cp-enterprise-prometheus:2.5.0
+      image: docker.io/confluentinc/cp-enterprise-prometheus:2.5.0
       pvc:
         dataVolumeCapacity: 10Gi
     alertmanager:
-      image: confluentinc/cp-enterprise-alertmanager:2.5.0
+      image: docker.io/confluentinc/cp-enterprise-alertmanager:2.5.0
 ---
 apiVersion: platform.confluent.io/v1beta1
 kind: SchemaRegistry
@@ -209,8 +209,8 @@ metadata:
 spec:
   replicas: 1
   image:
-    application: confluentinc/cp-schema-registry:8.2.1
-    init: confluentinc/confluent-init-container:3.2.2
+    application: docker.io/confluentinc/cp-schema-registry:8.2.2
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
   podTemplate:
     resources:
       requests:
@@ -229,8 +229,8 @@ metadata:
 spec:
   replicas: 1
   image:
-    application: confluentinc/cp-kafka-rest:8.2.1
-    init: confluentinc/confluent-init-container:3.2.2
+    application: docker.io/confluentinc/cp-kafka-rest:8.2.2
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
   dependencies:
     schemaRegistry:
       url: http://schemaregistry.confluent.svc.cluster.local:8081
