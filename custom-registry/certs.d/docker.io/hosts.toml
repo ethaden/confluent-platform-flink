@@ -1,5 +1,4 @@
-#server = "https://docker.io"
-
+# Change this to your mirror for docker.io
 [host."http://172.17.0.1:15001"]
   capabilities = ["pull", "resolve"]
   plain-http = true

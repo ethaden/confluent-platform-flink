@@ -1,3 +1,4 @@
+# Change this to your mirror for quay.io
 [host."http://172.17.0.1:15002"]
   capabilities = ["pull", "resolve"]
   plain-http = true
