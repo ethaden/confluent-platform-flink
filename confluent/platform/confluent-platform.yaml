@@ -34,8 +34,10 @@ spec:
         externalAccess:
           type: staticForPortBasedRouting
           staticForPortBasedRouting:
-            host: ://kafka # Domain pointing to your Ingress controller
-            portOffset: 9092  
+            host: kafka # Domain pointing to your Ingress controller
+            portOffset: 9092
+        tls:
+          enabled: false
   dependencies:
     kRaftController:
       clusterRef:
@@ -308,7 +310,7 @@ metadata:
   namespace: confluent
 spec:
   entryPoints:
-    - kafka
+  - kafka
   routes:
   - match: HostSNI(`*`)
     priority: 1
