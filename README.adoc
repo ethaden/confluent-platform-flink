@@ -194,6 +194,12 @@ SELECT * FROM orders EMIT CHANGES;
 
 You can access via Control Center or on the command line.
 
+On the command line, use this:
+
+```console
+confluent --url http://flink --environment myenv --compute-pool mypool flink shell
+```
+
 Some resources have been pre-configured for you:
 
 * An environment as a container for your statements and applications
@@ -215,6 +221,63 @@ show databases;
 show tables;
 ```
 
+Let's query the orders topic (note: you need to leave the window open as results of this continuous query are only visible once):
+
+```sql
+select * from orders;
+```
+
+Now let's do some real stream processing.
+
+First, select only events with certain characteristics and write them to a second topic:
+
+```sql
+select * from orders;
+```
+
+Let's check how the table has been created:
+
+```sql
+SHOW CREATE TABLE orders;
+```
+
+Note that the DDL output of the `address` field is truncated. In order to see the full result, run this on the command line:
+
+```console
+confluent --url http://flink --environment myenv --compute-pool mypool flink statement create ddl-orders --output json --sql "SHOW CREATE TABLE orders" | jq -r '.result.results.data[0].row[0]'
+confluent --url http://flink --environment myenv flink statement delete "ddl-orders" --force
+```
+
+```sql
+CREATE TABLE `mycatalog`.`mykafka`.`large_orders` (
+  `key` VARBINARY(2147483647),
+  `ordertime` BIGINT NOT NULL,
+  `orderid` INT NOT NULL,
+  `itemid` VARCHAR(2147483647) NOT NULL,
+  `orderunits` DOUBLE NOT NULL,
+  `address` ROW<`city` VARCHAR(2147483647) NOT NULL, `state` VARCHAR(2147483647) NOT NULL, `zipcode` BIGINT NOT NULL> NOT NULL
+) DISTRIBUTED BY (`key`) INTO 1 BUCKETS
+WITH (
+  'scan.bounded.mode' = 'unbounded',
+  'scan.startup.mode' = 'earliest-offset',
+  'changelog.mode' = 'append',
+  'kafka.cleanup-policy' = 'delete',
+  'connector' = 'confluent',
+  'value.format' = 'avro-registry',
+  'key.format' = 'raw'
+);
+```
+
+You will see a new topic in Kafka called `large_orders`.
+
+Let's add some data to it:
+
+```sql
+INSERT INTO large_orders SELECT * from orders where orderunits>=5.0
+```
+
+
+You can find more details in our documentation: https://docs.confluent.io/cp-flink/current/jobs/sql-statements/overview.html
 
 == Debugging the Setup
 

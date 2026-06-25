@@ -116,9 +116,6 @@ spec:
       runAsNonRoot: true
   keyConverterType: io.confluent.connect.avro.AvroConverter
   valueConverterType: io.confluent.connect.avro.AvroConverter
-  image:
-    application: docker.io/confluentinc/cp-server:8.2.2
-    init: docker.io/confluentinc/confluent-init-container:3.3.0
   build:
     type: onDemand
     onDemand:

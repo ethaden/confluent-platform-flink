@@ -1,3 +1,4 @@
-watchNamespaces: ["flink"]
+#watchNamespaces: ["flink", "flink-my-environment"]
+#watchNamespaces: ["flink"]
 image:
   repository: docker.io/confluentinc/cp-flink-kubernetes-operator
