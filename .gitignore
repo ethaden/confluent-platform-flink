@@ -4,3 +4,10 @@
 extract-log-files/.env
 extract-log-files/.venv
 nexus-admin-pass.txt
+build
+.gradle
+*/bin
+java-consumer/bin/
+java-producer/bin/
+bin
+.settings
