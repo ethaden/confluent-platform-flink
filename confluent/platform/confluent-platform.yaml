@@ -100,16 +100,28 @@ spec:
       - config.storage.replication.factor=1
       - offset.storage.replication.factor=1
       - status.storage.replication.factor=1
+    #log4j2:
+    #  Configuration:
+    #    Appenders:
+    #      Console:
+    #        - name: stdout
+    #          target: SYSTEM_OUT
+    #    Loggers:
+    #      Root:
+    #        - name: stdout
+    #          level: DEBUG
+    #          AppenderRef:
+    #            - ref: stdout
   podTemplate:
     resources:
       requests:
         cpu: 100m
-        memory: 512Mi
+        memory: 1G
     probe:
       liveness:
         periodSeconds: 10
         failureThreshold: 5
-        timeoutSeconds: 500 
+        timeoutSeconds: 500
     podSecurityContext:
       fsGroup: 1000
       runAsUser: 1000
