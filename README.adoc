@@ -273,7 +273,7 @@ You will see a new topic in Kafka called `large_orders`.
 Let's add some data to it:
 
 ```sql
-INSERT INTO large_orders SELECT * from orders where orderunits>=5.0
+INSERT INTO large_orders SELECT * from orders where orderunits>=5.0;
 ```
 
 

@@ -44,6 +44,14 @@ Run producer with gradle:
 ./gradlew java-producer:run --args="../config/producer.properties"
 ```
 
+If you want to produce unlimited many messages, use this:
+
+```bash
+./gradlew java-producer:run --args="-c -1 ../config/producer.properties"
+```
+
+The producer also understands the option `-w <time in ms>` or `--wait <time in ms>`. This specifies the time to wait between producing messages. Default is to wait 1000 ms (1 second). Set to `0` to disable.
+
 Run consumer with:
 
 ```bash

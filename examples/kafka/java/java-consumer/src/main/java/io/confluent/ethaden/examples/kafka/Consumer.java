@@ -20,17 +20,26 @@ import org.apache.logging.log4j.Logger;
 
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
 import models.avro.SimpleValue;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
-public class Consumer {
+@Command(name = "Consumer", version = "Kafka AVRO Consumer Example v1.0", mixinStandardHelpOptions = true)
+public class Consumer implements Runnable {
+
+    @Option(names = { "-p", "--poll" }, description = "Poll interval in ms. Default: 100")
+    private int poll = 100;
+
+    @Parameters(index = "0", arity = "1")
+    private String configFile;
 
     private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-    private static final int NB_MESSAGES = 10;
     private Properties properties;
     private String topic;
-    private static final Duration POLL_TIMEOUT = Duration.ofMillis(100);
 
-    private Properties loadConfig(final String configFile) throws IOException {
+    private Properties loadConfig() throws IOException {
         if (!Files.exists(Paths.get(configFile))) {
             throw new IOException(configFile + " not found.");
         }
@@ -55,36 +64,35 @@ public class Consumer {
         return cfg;
     }
 
+    public void run() {
+      try {
+        this.properties = loadConfig();
+        this.topic = this.properties.getProperty("topic");
+        this.subscribe();
+      } catch (IOException e)
+      {
+        System.err.println("Exception while reading config file: "+e);
+      }
+    }
     public static void main(String[] args) {
-        LOGGER.info("Starting consumer");
-
-        // Load producer configuration settings from a local file
-        if (args.length != 1) {
-            System.out.println("Usage: java consumer.jar <consumer.properties>");
-            System.exit(1);
-        }
-        try {
-            Consumer consumer = new Consumer(args[0]);
-            consumer.subscribe();
-        } catch (IOException e) {
-            System.err.println("Exception while reading config file: " + e);
-        }
+      int exitCode = new CommandLine(new Consumer()).execute(args);
+      System.exit(exitCode);
     }
 
-    public Consumer(final String propFile) throws IOException {
-        this.properties = loadConfig(propFile);
-        this.topic = this.properties.getProperty("topic");
+    public Consumer() {
     }
 
     private void subscribe() {
+        LOGGER.info("Starting AVRO consumer");
         try (KafkaConsumer<String, SimpleValue> consumer = new KafkaConsumer<>(this.properties)) {
             // Subscribe to our topic
             LOGGER.info("Subscribing to topic " + this.topic);
             consumer.subscribe(List.of(this.topic));
             //noinspection InfiniteLoopStatement
+            Duration poll_timeout = Duration.ofMillis(this.poll);
             while (true) {
                 try {
-                    final var records = consumer.poll(POLL_TIMEOUT);
+                    final var records = consumer.poll(poll_timeout);
                     int count = records.count();
                     if (count != 0) {
                         LOGGER.info("Poll return {} records", count);

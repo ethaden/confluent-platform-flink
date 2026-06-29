@@ -3,10 +3,12 @@ package io.confluent.ethaden.examples.kafka;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import static java.lang.Thread.sleep;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
+
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -14,26 +16,51 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
-import io.confluent.kafka.serializers.KafkaAvroSerializerConfig;
 import models.avro.SimpleValue;
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
+@Command(name = "Producer", version = "Kafka AVRO Producer Example v1.0", mixinStandardHelpOptions = true)
+public class Produce implements Runnable {
 
-public class Produce {
+    @Option(names = { "-c", "--count" }, description = "Number of of messages to be produced. Set to \"-1\" for unlimited number of messages. Default: 10")
+    private int count = 10;
+
+    @Option(names = { "-w", "--wait" }, description = "Time to wait between sending messages in ms. \"-1\": do not wait. Default: 1000")
+    private int wait = 1000;
+
+    @Parameters(index = "0", arity = "1")
+    private String configFile;
 
     private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-    private static final int NB_MESSAGES = 10;
     private Properties properties;
-    private int count = 0;
     private String topic;
 
-    public Produce(final String propFile) throws IOException {
-        this.properties = loadConfig(propFile);
-        this.topic = this.properties.getProperty("topic");
+    public Produce() {
     }
 
-    private Properties loadConfig(final String configFile) throws IOException {
+    @Override
+    public void run() {
+        try {
+            this.properties = loadConfig();
+            this.topic = this.properties.getProperty("topic");
+            this.sendAvroProducer();
+        } catch (IOException e) {
+            System.err.println("Exception while reading config file: "+e);
+        }
+    }
+
+    public static void main(String[] args) {
+        int exitCode = new CommandLine(new Produce()).execute(args);
+        System.exit(exitCode);
+    }
+
+    private Properties loadConfig() throws IOException {
         if (!Files.exists(Paths.get(configFile))) {
             throw new IOException(configFile + " not found.");
         }
@@ -49,31 +76,18 @@ public class Produce {
         return cfg;
     }
 
-    public static void main(String[] args) {
-        // Load producer configuration settings from a local file
-        if (args.length != 1) {
-            System.out.println("Usage: java producer.jar <producer.properties>");
-            System.exit(1);
-        }
-        try {
-            Produce produce = new Produce(args[0]);
-            produce.sendAvroProducer(10);
-        } catch (IOException e) {
-            System.err.println("Exception while reading config file: "+e);
-        }
-    }
-
-    void sendAvroProducer(int nb) {
-        LOGGER.info("Starting Arvo Producer");
+    void sendAvroProducer() {
+        LOGGER.info("Starting AVRO Producer");
         try (KafkaProducer<String, SimpleValue> producer = new KafkaProducer<>(this.properties)) {
-            for (int i=0; i < nb; i++) {
-                String key = Integer.toString(count);
+            int n=0;
+            while (count==-1 || n<count) {
+                String key = Integer.toString(n);
                 SimpleValue value = SimpleValue.newBuilder()
                         .setTheName("This is message " + key)
                         .setTheValue("This is the value")
                         .build();
                 ProducerRecord<String, SimpleValue> producerRecord = new ProducerRecord<>(this.topic, key, value);
-                LOGGER.info("Sending message {}", count);
+                LOGGER.info("Sending message {}", n);
                 producer.send(producerRecord, (RecordMetadata recordMetadata, Exception exception) -> {
                     if (exception == null) {
                         System.out.println("Record written to offset " +
@@ -84,7 +98,14 @@ public class Produce {
                         exception.printStackTrace(System.err);
                     }
               });
-                count++;
+              n++;
+              if (wait>0) {
+                try {
+                    sleep(wait);                    
+                } catch (InterruptedException e) {
+                  break;
+                }
+              }
             }
             LOGGER.info("Producer flush");
             producer.flush();
