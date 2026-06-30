@@ -25,7 +25,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(name = "Producer", version = "Kafka AVRO Producer Example v1.0", mixinStandardHelpOptions = true)
-public class Produce implements Runnable {
+public class Producer implements Runnable {
 
     @Option(names = { "-c", "--count" }, description = "Number of of messages to be produced. Set to \"-1\" for unlimited number of messages. Default: 10")
     private int count = 10;
@@ -41,7 +41,7 @@ public class Produce implements Runnable {
     private Properties properties;
     private String topic;
 
-    public Produce() {
+    public Producer() {
     }
 
     @Override
@@ -56,7 +56,7 @@ public class Produce implements Runnable {
     }
 
     public static void main(String[] args) {
-        int exitCode = new CommandLine(new Produce()).execute(args);
+        int exitCode = new CommandLine(new Producer()).execute(args);
         System.exit(exitCode);
     }
 

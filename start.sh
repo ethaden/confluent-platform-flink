@@ -63,7 +63,7 @@ kubectl create secret generic c3-mds-client \
 # Install the operator of Confluent for Kubernetes
 
 helm upgrade --install confluent-operator confluentinc/confluent-for-kubernetes \
-  $HELM_VERSION_FLAG_CONFLUENT_FOR_KUBERNETES
+  $HELM_VERSION_FLAG_CONFLUENT_FOR_KUBERNETES -f kubernetes/helm-confluent-for-kubernetes.yaml
 # Install a CP cluster: Please check versions of images used by the custom resources in the yaml file
 kubectl apply -f confluent/platform/confluent-platform.yaml
 

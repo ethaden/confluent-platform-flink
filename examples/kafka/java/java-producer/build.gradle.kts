@@ -15,7 +15,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("io.confluent.ethaden.examples.kafka.Produce")
+    mainClass.set("io.confluent.ethaden.examples.kafka.Producer")
 }
 
 avro {
