@@ -4,13 +4,13 @@
 
 Building the code using gradle:
 
-```bash
+```console
 ./gradlew build
 ```
 
 Potentially, you might need to update gradle first:
 
-```bash
+```console
 gradle wrapper
 ```
 
@@ -18,13 +18,13 @@ gradle wrapper
 
 First, start the docker environment:
 
-```bash
+```console
 docker compose up -d
 ```
 
 First, set the compatilibity level of our subject to "FORWARD_TRANSITIVE":
 
-```bash
+```console
 curl -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" \
 --data '{"compatibility": "FORWARD_TRANSITIVE"}' \
 http://localhost:8081/config/topic-value
@@ -32,7 +32,7 @@ http://localhost:8081/config/topic-value
 
 Register the schema:
 
-```bash
+```console
 curl -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
 --data '{"schema": "{\"namespace\": \"models.avro\", \"type\": \"record\", \"name\": \"SimpleValue\", \"fields\": [ {\"name\": \"theName\", \"type\": \"string\"}, {\"name\": \"theValue\", \"type\": \"string\"}, {\"name\": \"theNewName\", \"type\": \"string\"}]}"}' \
 http://schemaregistry:8081/subjects/topic-value/versions
@@ -40,13 +40,13 @@ http://schemaregistry:8081/subjects/topic-value/versions
 
 Run producer with gradle:
 
-```bash
+```console
 ./gradlew java-producer:run --args="../config/producer.properties"
 ```
 
 If you want to produce unlimited many messages, use this:
 
-```bash
+```console
 ./gradlew java-producer:run --args="-c -1 ../config/producer.properties"
 ```
 
@@ -54,9 +54,44 @@ The producer also understands the option `-w <time in ms>` or `--wait <time in m
 
 Run consumer with:
 
-```bash
+```console
 ./gradlew :java-consumer:run --args="../config/consumer.properties"
 ```
+
+=== Client Metrics with KIP-714
+
+You can enable the integrated extended monitoring features which have been implemented in KIP-714 on the broker side like this:
+
+```console
+kafka-client-metrics --bootstrap-server <broker-addres:broker-port> --alter --name <subscription_name> --metrics <metric_name_prefix> --interval <interval_ms>
+```
+
+For enabling monitoring for our Java producer for a specific metric, i.e. `org.apache.kafka.producer.record`, do the following:
+
+```console
+kafka-client-metrics --bootstrap-server broker:9092 --alter --name java-producer-record-metrics --metrics "org.apache.kafka.producer.record" --interval 10000
+```
+
+Let's enable all metrics instead:
+
+```console
+kafka-client-metrics --bootstrap-server broker:9092 --alter --name all-metrics --metrics "*" --interval 10000
+```
+
+List all configured metrics:
+
+```console
+kafka-client-metrics --bootstrap-server broker:9092 --list
+```
+
+In a separate terminal, run the producer:
+
+```console
+./gradlew :java-consumer:run --args="../config/consumer.properties"
+```
+
+Point your browser to `http://prometheus/`. 
+
 
 == Helpful tools
 
@@ -65,25 +100,25 @@ Run consumer with:
 
 Get all known versions of the schema:
 
-```bash
+```console
 curl -H "Content-Type: application/vnd.schemaregistry.v1+json" http://localhost:8081/subjects/topic-value/versions
 ```
 
 Inspect a specific version (here: version 1):
 
-```bash
+```console
 curl -H "Content-Type: application/vnd.schemaregistry.v1+json" http://localhost:8081/subjects/topic-value/versions/1
 ```
 
 Soft delete a specific version:
 
-```bash
+```console
 curl -X DELETE -H "Content-Type: application/vnd.schemaregistry.v1+json" http://localhost:8081/subjects/topic-value/versions/1
 ```
 
 Permanently delete a specific version (you need to soft delete first):
 
-```bash
+```console
 curl -X DELETE -H "Content-Type: application/vnd.schemaregistry.v1+json" http://localhost:8081/subjects/topic-value/versions/1?permanent=true
 ```
 
@@ -92,31 +127,31 @@ curl -X DELETE -H "Content-Type: application/vnd.schemaregistry.v1+json" http://
 
 Read messages via CLI tools, using standard console consumer:
 
-```bash
+```console
 kafka-console-consumer --bootstrap-server broker:9092 --topic java --from-beginning
 ```
 
 Read messages via avro console consumer:
 
-```bash
+```console
 kafka-avro-console-consumer --bootstrap-server broker:9092 --property schema.registry.url=http://schemaregistry:8081 --topic java --from-beginning
 ```
 
 You might want to delete the topic to start fresh between tests:
 
-```bash
+```console
  kafka-topics --bootstrap-server broker:9092 --delete --topic java
 ```
 
 Alternatively, if you just want to consume the same messages again with the Java consumer, just reset the consumer groups offset:
 
-```bash
+```console
 kafka-consumer-groups --bootstrap-server broker:9092 --group Consumer --reset-offsets --to-earliest --topic java --execute
 ```
 
 You can view the offsets by running:
 
-```bash
+```console
 kafka-consumer-groups --bootstrap-server broker:9092 --group Consumer --describe
 ```
 
@@ -126,7 +161,7 @@ kafka-consumer-groups --bootstrap-server broker:9092 --group Consumer --describe
 
 Check for dependency updates in each of the sub projects like this:
 
-```bash
+```console
 ./gradlew -P java-producer dependencyUpdates -Drevision=release
 ```
 
@@ -134,14 +169,20 @@ Upgrade the dependency manually.
 
 For upgrading the gradle version, you can use this:
 
-```bash
+```console
 gradle wrapper --gradle-version <gradle version>
+```
+
+Show all dependencies:
+
+```console
+./gradlew -p java-producer dependencies
 ```
 
 
 == Shutting down, deleting containers
 
-```bash
+```console
 docker compose down -v
 ```
 

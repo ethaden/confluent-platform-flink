@@ -11,3 +11,5 @@ java-consumer/bin/
 java-producer/bin/
 bin
 .settings
+build/.gradle
+buildSrc/.gradle

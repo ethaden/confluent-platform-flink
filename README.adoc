@@ -31,8 +31,8 @@ Alternatively, you can just run a f subset of the available components.
 Please make sure to have these lines in your /etc/hosts file, though:
 
 ```console
-127.0.0.1   kafka mds schemaregistry flink controlcenter ksqldb s3storage
-::1         kafka mds schemaregistry flink controlcenter ksqldb s3storage
+127.0.0.1   kafka mds schemaregistry flink controlcenter ksqldb s3storage prometheus
+::1         kafka mds schemaregistry flink controlcenter ksqldb s3storage prometheus
 ```
 
 == Setting up the infrastructure
@@ -62,7 +62,7 @@ Make sure you have all images in that enterprise image repository.
 Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
 
 ```console
-kubectl run kafka-cli -i --tty --image=docker.io/confluentinc/cp-server:8.2.1 -
+kubectl run kafka-cli -i --tty --image=docker.io/confluentinc/cp-server:8.2.2 -
 -restart=Never --rm -- bash
 ```
 
@@ -93,6 +93,12 @@ Use `users` as value for the `kafka.topic` field and `users` as value for the `q
 Start the connect and watch the events being produced to the topic.
 
 For more options, please have a look at the documentation here: https://docs.confluent.io/cloud/current/connectors/cc-datagen-source.html
+
+=== Kafka Java Application
+
+Please go to the folder `examples/kafka/java` for a simple Java produer and consumer. You will also find some insights into how to use monitoring with KIP-714:
+
+xref:examples/kafka/java/README.adoc[Java Kafka Examples]
 
 
 === Flink Applications
