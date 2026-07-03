@@ -87,7 +87,7 @@ kafka-client-metrics --bootstrap-server broker:9092 --list
 In a separate terminal, run the producer:
 
 ```console
-./gradlew :java-producer:run --args="../config/producer.properties"
+./gradlew :java-producer:run --args="-c -1 ../config/producer.properties"
 ```
 
 Point your browser to `http://prometheus/`. 

@@ -11,7 +11,7 @@ spec:
   replicas: 1
   dependencies:
     metricsClient:
-      url: http://controlcenter.operator.svc.cluster.local:9090
+      url: http://controlcenter.confluent.svc.cluster.local:9090
   podTemplate:
     resources:
       requests:
@@ -46,7 +46,7 @@ spec:
       clusterRef:
         name: kraftcontroller
     metricsClient:
-      url: http://controlcenter.operator.svc.cluster.local:9090
+      url: http://controlcenter.confluent.svc.cluster.local:9090
   dataVolumeCapacity: 10Gi
   configOverrides:
     server:
@@ -69,6 +69,7 @@ spec:
       #- "client.telemetry.enabled=true"
       #- "confluent.telemetry.enabled=true"
       - "password.encoder.secret=secret"
+      - "telemetry.metrics.enabled=true"
       - "confluent.telemetry.exporter._c3.enabled=true"
       - "confluent.telemetry.exporter._c3.type=http"
       - "confluent.telemetry.exporter._c3.client.base.url=http://controlcenter.operator.svc.cluster.local:9090/api/v1/otlp"
