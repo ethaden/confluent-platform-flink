@@ -84,13 +84,38 @@ List all configured metrics:
 kafka-client-metrics --bootstrap-server broker:9092 --list
 ```
 
+You can describe the configurations:
+
+```console
+kafka-client-metrics --bootstrap-server broker:9092 --describe
+```
+
+
 In a separate terminal, run the producer:
 
 ```console
 ./gradlew :java-producer:run --args="-c -1 ../config/producer.properties"
 ```
 
-Point your browser to `http://prometheus/`. 
+Point your browser to `http://controlcenter/` and open the `Clients` page of your cluster.
+
+Alternatively, you can also open `http://prometheus/` and inspect the metrics directly. For example, enter this metric in to the query window:
+
+```
+org_apache_kafka_producer_request_latency_avg{client_external_client_id="Java-Producer"}
+producer.record.queue.time.avg{client_external_client_id="Java-Producer"}
+org_apache_kafka_producer_record_queue_time_avg{client_external_client_id="Java-Producer"}
+```
+
+Some metrics are enabled in Confluent Platform by default. Others can be enabled optionally.
+
+Disable the `all-metrics` configuration again:
+
+```console
+kafka-client-metrics --bootstrap-server broker:9092 --delete --name all-metrics
+```
+
+For a full list of required and optional metrics, please have a look at the https://cwiki.apache.org/confluence/spaces/KAFKA/pages/173085915/KIP-714+Client+metrics+and+observability#KIP714%3AClientmetricsandobservability-Clientmetricsandmetriclabels[documentation for KIP-714]).
 
 
 == Helpful tools
