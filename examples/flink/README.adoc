@@ -1,0 +1,4 @@
+= Examples for CP Flink
+
+Please see the main link:../../README.adoc[README] for details.
+

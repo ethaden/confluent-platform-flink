@@ -83,6 +83,14 @@ You can connect to control center with your browser via (make sure you have dele
 * http://controlcenter/ (this makes use of SNI, make sure you have updated your `/etc/hosts`), or
 * http://localhost:9021/ (direct TCP connection to control center, no SNI)
 
+=== S3 Storage
+
+This demo comes with an optional S3 storage based on RustFS.
+
+In order to configure it, point your browser at this URL: http://s3storage/
+
+You can log in with username `admin` and password `admin`.
+
 === Kafka connect
 
 This demo consists of a Kafka Connect cluster which can download and use the Datagen Source Connector from the Confluent Hub.
