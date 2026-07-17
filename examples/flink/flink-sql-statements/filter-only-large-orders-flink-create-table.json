@@ -1,0 +1,21 @@
+{
+  "apiVersion": "cmf.confluent.io/v1",
+  "kind": "Statement",
+  "metadata": {
+    "name": "create-large-orders-table"
+  },
+  "spec": {
+    "statement": "CREATE TABLE IF NOT EXISTS `mycatalog`.`mykafka`.`large_orders` (`key` VARBINARY(2147483647), `ordertime` BIGINT NOT NULL, `orderid` INT NOT NULL, `itemid` VARCHAR(2147483647) NOT NULL, `orderunits` DOUBLE NOT NULL, `address` ROW<`city` VARCHAR(2147483647) NOT NULL, `state` VARCHAR(2147483647) NOT NULL, `zipcode` BIGINT NOT NULL> NOT NULL) DISTRIBUTED BY (`key`) INTO 1 BUCKETS WITH ('scan.bounded.mode' = 'unbounded', 'scan.startup.mode' = 'earliest-offset', 'changelog.mode' = 'append', 'kafka.cleanup-policy' = 'delete', 'connector' = 'confluent', 'value.format' = 'avro-registry', 'key.format' = 'raw');",
+    "properties": {
+      "sql.current-catalog": "mycatalog",
+      "sql.current-database": "mykafka"
+    },
+    "flinkConfiguration": {
+      "state.backend.type": "hashmap",
+      "execution.checkpointing.interval": "60 s"
+    },
+    "computePoolName": "mypool",
+    "parallelism": 4,
+    "stopped": false
+  }
+}

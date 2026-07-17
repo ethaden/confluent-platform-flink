@@ -1,0 +1,21 @@
+{
+  "apiVersion": "cmf.confluent.io/v1",
+  "kind": "Statement",
+  "metadata": {
+    "name": "select-larger-orders"
+  },
+  "spec": {
+    "statement": "INSERT INTO `mycatalog`.`mykafka`.`large_orders` SELECT * FROM `mycatalog`.`mykafka`.`orders` WHERE orderunits >= 5.0;",
+    "properties": {
+      "sql.current-catalog": "mycatalog",
+      "sql.current-database": "mykafka"
+    },
+    "flinkConfiguration": {
+      "state.backend.type": "hashmap",
+      "execution.checkpointing.interval": "60 s"
+    },
+    "computePoolName": "mypool",
+    "parallelism": 4,
+    "stopped": false
+  }
+}
