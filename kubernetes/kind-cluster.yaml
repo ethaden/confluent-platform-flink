@@ -18,6 +18,9 @@ nodes:
   - containerPort: 8081
     hostPort: 8081
     protocol: TCP
+  - containerPort: 8090
+    hostPort: 8090
+    protocol: TCP
   - containerPort: 9021
     hostPort: 9021
     protocol: TCP

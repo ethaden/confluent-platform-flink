@@ -24,6 +24,12 @@ ports:
     protocol: TCP
     expose:
       default: true
+  mds:
+    port: 8090
+    hostPort: 8090
+    protocol: TCP
+    expose:
+      default: true
 ingressRoute:
   dashboard:
     # -- Create an IngressRoute for the dashboard

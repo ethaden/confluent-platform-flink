@@ -262,6 +262,10 @@ confluent --url http://flink --environment myenv --compute-pool mypool flink sta
 confluent --url http://flink --environment myenv flink statement delete "ddl-orders" --force
 ```
 
+Now, you can either create the table yourself and run the select statement below, or you deploy a Flink application which will do exactly the same for you, but in a more concise way.
+
+Let's first look at the manual way using the UI:
+
 ```sql
 CREATE TABLE `mycatalog`.`mykafka`.`large_orders` (
   `key` VARBINARY(2147483647),
@@ -292,6 +296,21 @@ INSERT INTO large_orders SELECT * from orders where orderunits>=5.0;
 
 
 You can find more details in our documentation: https://docs.confluent.io/cp-flink/current/jobs/sql-statements/overview.html
+
+If you have used the statements above, stop them and remove the table:
+
+```sql
+DROP TABLE large_orders;
+```
+
+Use the flink application instead:
+
+```console
+curl -v -H "Content-Type: application/json" http://flink/cmf/api/v1/environments/myenv/statements -d @./examples/flink/flink-sql-statements/filter-only-large-orders-flink-create-table.json
+curl -v -H "Content-Type: application/json" http://flink/cmf/api/v1/environments/myenv/statements -d @./examples/flink/flink-sql-statements/filter-only-large-orders-flink-insert-select.json
+```
+
+
 
 == Debugging the Setup
 
