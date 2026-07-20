@@ -33,12 +33,12 @@ helm repo add jetstack https://charts.jetstack.io --force-update
 helm repo update
 
 # Optional: Pin Helm versions
-export HELM_VERSION_FLAG_TRAEFIK="--version 41.0.0"
-export HELM_VERSION_FLAG_RUSTFS="--version 0.8.0"
-export HELM_VERSION_FLAG_CERTMANAGER="--version v1.20.2"
-export HELM_VERSION_FLAG_CONFLUENT_FOR_KUBERNETES="--version 0.1514.40"
-export HELM_VERSION_FLAG_CONFLUENT_MANAGER_FOR_FLINK="--version 2.3.0"
-export HELM_VERSION_FLAG_FLINK_OPERATOR="--version 1.140.1"
+export HELM_VERSION_FLAG_TRAEFIK="--version 41.0.2"
+export HELM_VERSION_FLAG_RUSTFS="--version 0.10.0"
+export HELM_VERSION_FLAG_CERTMANAGER="--version v1.21.0"
+export HELM_VERSION_FLAG_CONFLUENT_FOR_KUBERNETES="--version 0.1718.10"
+export HELM_VERSION_FLAG_CONFLUENT_MANAGER_FOR_FLINK="--version 2.4.0"
+export HELM_VERSION_FLAG_FLINK_OPERATOR="--version 1.150.2"
 
 # Alternative: Install traefik as ingress controller with Loadbalancer
 helm upgrade -n traefik --create-namespace --install traefik traefik/traefik $HELM_VERSION_FLAG_TRAEFIK -f kubernetes/helm-traefik.yaml

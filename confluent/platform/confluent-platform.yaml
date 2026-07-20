@@ -200,8 +200,25 @@ metadata:
 spec:
   replicas: 1
   image:
-    application: docker.io/confluentinc/cp-enterprise-control-center-next-gen:2.5.0
-    init: docker.io/confluentinc/confluent-init-container:3.1.0
+    application: docker.io/confluentinc/cp-enterprise-control-center-next-gen:2.6.0
+    init: docker.io/confluentinc/confluent-init-container:3.3.0
+  podTemplate:
+    probe:
+      startup:
+        initialDelaySeconds: 60
+        periodSeconds: 10
+        failureThreshold: 30
+        timeoutSeconds: 5
+      liveness:
+        periodSeconds: 15
+        failureThreshold: 3
+        timeoutSeconds: 5
+        initialDelaySeconds: 300
+      readiness:
+        initialDelaySeconds: 300
+        periodSeconds: 10
+        failureThreshold: 4
+        timeoutSeconds: 5
   dataVolumeCapacity: 10Gi
   configOverrides:
     server:
@@ -211,8 +228,9 @@ spec:
       - "confluent.monitoring.interceptor.topic.replication=1"
       - "confluent.controlcenter.telemetry.enabled=true"
       - "confluent.controlcenter.ksql.ksqldb.advertised.url=http://ksqldb"
-      - "confluent.controlcenter.cmf.enable=true"
-      - "confluent.controlcenter.cmf.url=http://cmf-service.flink.svc.cluster.local"
+      # Using new separate flink UI instead. Go to http://flink with your browser
+      #- "confluent.controlcenter.cmf.enable=true"
+      #- "confluent.controlcenter.cmf.url=http://cmf-service.flink.svc.cluster.local"
       #- confluent.controlcenter.replication.factor=1
       #- confluent.metrics.reporter.topic.replicas=1
   dependencies:
@@ -426,6 +444,7 @@ spec:
     services:
     - name: controlcenter
       port: 9021
+---
 # MDS directly through port 8090
 apiVersion: traefik.io/v1alpha1
 kind: IngressRouteTCP
