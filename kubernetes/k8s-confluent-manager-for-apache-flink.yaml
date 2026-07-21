@@ -1,6 +1,0 @@
-serviceAccount:
-  name: "confluent-manager-for-apache-flink"
-image:
-  repository: docker.io/confluentinc
-#cmf:
-#  stackTraceLogging: true

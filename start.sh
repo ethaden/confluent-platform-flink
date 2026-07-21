@@ -39,14 +39,52 @@ export HELM_VERSION_FLAG_CERTMANAGER="--version v1.21.0"
 export HELM_VERSION_FLAG_CONFLUENT_FOR_KUBERNETES="--version 0.1718.10"
 export HELM_VERSION_FLAG_CONFLUENT_MANAGER_FOR_FLINK="--version 2.4.0"
 export HELM_VERSION_FLAG_FLINK_OPERATOR="--version 1.150.2"
+# Used when running the RustFS "rc" command line tool
+export RUSTFS_VERSION="v0.1.29"
+export AWS_ACCESS_KEY_ID="admin"
+export AWS_SECRET_ACCESS_KEY="admin"
+export AWS_DEFAULT_REGION="us-east-1"
+export AWS_ACCESS_KEY_ID_CMF="cmf-rustfs-key"
+export AWS_SECRET_ACCESS_KEY_CMF="cmf-rustfs-secret"
+
+poll_endpoint() {
+    local url="${1:?Error: URL endpoint is required}"
+    local max_attempts="${2:-120}"
+    local sleep_seconds="${3:-2}"
+    local attempt=1
+    echo "Wait until $url is reachable (max $max_attempts attempts, $sleep_seconds seconds between attempts)..."
+
+    while [ "$attempt" -le "$max_attempts" ]; do
+        local status
+        status=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+
+        echo "Trying to reach $url: attempt $attempt: HTTP $status"
+
+        if [ "$status" -ne 503 ] && [ "$status" -ne 404 ] && [ "$status" -ne 000 ]; then
+            echo "Finished! Endpoint $url is stable with HTTP $status."
+            return 0
+        fi
+
+        sleep "$sleep_seconds"
+        ((attempt++))
+    done
+
+    echo "Timeout: Endpoint failed to stabilize."
+    return 1
+}
 
 # Alternative: Install traefik as ingress controller with Loadbalancer
 helm upgrade -n traefik --create-namespace --install traefik traefik/traefik $HELM_VERSION_FLAG_TRAEFIK -f kubernetes/helm-traefik.yaml
 
 # Install RustFS as minio is not maintained anymore
 helm upgrade -n rustfs --create-namespace --install rustfs rustfs/rustfs $HELM_VERSION_FLAG_RUSTFS -f kubernetes/helm-rustfs.yaml
-kubectl create namespace rustfs-flink
-kubectl -n rustfs-flink apply -f kubernetes/k8s-rustfs-flink-tenant.yaml
+#kubectl create namespace rustfs-flink
+#kubectl -n rustfs-flink apply -f kubernetes/k8s-rustfs-flink-tenant.yaml
+# Wait until RustFS is ready
+poll_endpoint http://s3storage/ || exit 1
+# Create a new bucket "cmf-bucket" in RustFS for CMF, with access key "cmf-rustfs-key" and secret "cmf-rustfs-secret"
+envsubst < kubernetes/k8s-rustfs-create-cmf-bucket.yaml | kubectl apply -f -
+
 #helm upgrade -n minio-operator --create-namespace --install minio-operator minio-operator/operator -f kubernetes/k8s-minio-operator.yaml
 # Install a minio tenant for flink
 #helm upgrade -n minio-flink --create-namespace --install  minio-flink minio-operator/tenant -f kubernetes/k8s-minio-flink.yaml
@@ -83,7 +121,7 @@ confluentinc/flink-kubernetes-operator $HELM_VERSION_FLAG_FLINK_OPERATOR -f kube
 # Install Confluent Manger for Apache Flink (using version 2.3.0 due to an issue with 2.3.1)
 helm upgrade --create-namespace --install cmf \
 confluentinc/confluent-manager-for-apache-flink $HELM_VERSION_FLAG_CONFLUENT_MANAGER_FOR_FLINK \
---namespace flink -f kubernetes/k8s-confluent-manager-for-apache-flink.yaml
+--namespace flink -f kubernetes/helm-confluent-manager-for-apache-flink.yaml
 
 # Create a service account for managing flink resources
 #kubectl -n flink create serviceaccount flink-service-account
@@ -93,46 +131,65 @@ kubectl -n flink apply -f kubernetes/k8s-flink-ingress.yaml
 
 kubectl create namespace flink-my-environment
 # We need to wait until Flink is available...
-URL="http://flink/cmf/api/v1/environments"
+CMF_URL="http://flink/cmf/api/v1/environments"
 TIMEOUT_SECS=300
 INTERVAL_SECS=5
 CONTINUE=0
 
+poll_endpoint $CMF_URL || exit 1
+# Create a catalog (Schema Registry)
+curl -H "Content-Type: application/json" \
+  -X POST http://flink/cmf/api/v1/catalogs/kafka \
+  -d@kubernetes/rest-flink-my-catalog.json
+# Create an environment
+curl -H "Content-Type: application/json" \
+  -X POST http://flink/cmf/api/v1/environments \
+  -d@kubernetes/rest-flink-my-environment.json
+# Create a compute pool
+curl -v -H "Content-Type: application/json" \
+-X POST http://flink/cmf/api/v1/environments/myenv/compute-pools \
+-d@kubernetes/rest-flink-my-compute-pool.json
+# Create a database (the Kafka cluster)
+curl -H "Content-Type: application/json" \
+  -X POST http://flink/cmf/api/v1/catalogs/kafka/mycatalog/databases \
+  -d@kubernetes/rest-flink-my-database.json
+
+
 # Calculate expiration time
-END_TIME=$((SECONDS + TIMEOUT_SECS))
+#END_TIME=$((SECONDS + TIMEOUT_SECS))
 
-echo "Polling $URL for up to ${TIMEOUT_SECS}s..."
+#echo "Polling $URL for up to ${TIMEOUT_SECS}s..."
 
-while [ $SECONDS -lt $END_TIME -a $CONTINUE -ne 1 ]; do
-    # Fetch HTTP status code only
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-    
-    # Exit loop if status is anything other than 503
-    if [ "$STATUS" != "503" -a "$STATUS" != "404" ]; then
-        echo "Finished waiting. Final status code: $STATUS"
-
-        curl -H "Content-Type: application/json" \
-          -X POST http://flink/cmf/api/v1/catalogs/kafka \
-          -d@kubernetes/rest-flink-my-catalog.json
-
-        curl -H "Content-Type: application/json" \
-          -X POST http://flink/cmf/api/v1/environments \
-          -d@kubernetes/rest-flink-my-environment.json
-
-        curl -v -H "Content-Type: application/json" \
-        -X POST http://flink/cmf/api/v1/environments/myenv/compute-pools \
-        -d@kubernetes/rest-flink-my-compute-pool.json
-        
-        curl -H "Content-Type: application/json" \
-          -X POST http://flink/cmf/api/v1/catalogs/kafka/mycatalog/databases \
-          -d@kubernetes/rest-flink-my-database.json
-
-        CONTINUE=1
-    fi
-    
-    echo "Waiting for Confluent Manager for Apache Flink (received $STATUS). Retrying in ${INTERVAL_SECS}s..."
-    sleep "$INTERVAL_SECS"
-done
+#while [ $SECONDS -lt $END_TIME -a $CONTINUE -ne 1 ]; do
+#    # Fetch HTTP status code only
+#    STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+#    
+#    # Exit loop if status is anything other than 503
+#    if [ "$STATUS" != "503" -a "$STATUS" != "404" ]; then
+#        echo "Finished waiting. Final status code: $STATUS"
+#
+#        curl -H "Content-Type: application/json" \
+#          -X POST http://flink/cmf/api/v1/catalogs/kafka \
+#          -d@kubernetes/rest-flink-my-catalog.json
+#
+#        curl -H "Content-Type: application/json" \
+#          -X POST http://flink/cmf/api/v1/environments \
+#          -d@kubernetes/rest-flink-my-environment.json
+#
+#        curl -v -H "Content-Type: application/json" \
+#        -X POST http://flink/cmf/api/v1/environments/myenv/compute-pools \
+#        -d@kubernetes/rest-flink-my-compute-pool.json
+#        
+#        curl -H "Content-Type: application/json" \
+#          -X POST http://flink/cmf/api/v1/catalogs/kafka/mycatalog/databases \
+#          -d@kubernetes/rest-flink-my-database.json
+#
+#        CONTINUE=1
+#    fi
+#    
+#    echo "Waiting for Confluent Manager for Apache Flink (received $STATUS). Retrying in ${INTERVAL_SECS}s..."
+#    sleep "$INTERVAL_SECS"
+#done
 
 # For deleting resources (we are NOT actually running these here. They are just provided for convenience)
 if [ 1 -eq 0 ]; then

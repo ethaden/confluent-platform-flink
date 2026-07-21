@@ -11,6 +11,7 @@ You need to have the following software installed:
 * kubectl: Depends on your platform
 * helm: https://helm.sh/
 * confluent cli: https://docs.confluent.io/confluent-cli/current/install.html
+* Optional: RustFS "rc" cli: https://github.com/rustfs/cli/releases
 
 Additionally required packages to be installed via local distribution-specific package manager
 
@@ -59,7 +60,7 @@ Make sure you have all images in that enterprise image repository.
 == Usage
 
 
-Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out:
+Alternatively, you can run commands directly in a kubernetes pod which is deleted once you log out. This option is useful if you do not have the Kafka tools installed on your local machine.
 
 ```console
 kubectl run kafka-cli -i --tty --image=docker.io/confluentinc/cp-server:8.2.2 -
@@ -77,6 +78,10 @@ Check the status of the KRaft controller:
 ```console
 kafka-metadata-quorum --bootstrap-server kafka:9092 describe --status
 ```
+
+Please note: for production clusters, using the `confluent` CLI tool is recommended. However, in this demo we cannot use the CLI for Kafka as it requires authentication and authorization to be set up. For more information, please see: https://docs.confluent.io/confluent-cli/current/overview.html
+
+=== Control Center 2.x
 
 You can connect to control center with your browser via (make sure you have deleted the HTTP test described above):
 
@@ -109,26 +114,9 @@ Please go to the folder `examples/kafka/java` for a simple Java produer and cons
 xref:examples/kafka/java/README.adoc[Java Kafka Examples]
 
 
-=== Flink Applications
+== Flink
 
-In the following, a few example applications are deployed.
-Note, the `confluent` CLI works with both Confluent Cloud and Confluent Platform. If you are working in a hybrid setup where you have both, make sure to logout via `confluent logout` from Confluent Cloud before using the CLI for accessing Confluent Platform. The `--url` is mandatory when accessing Confluent Platform with the CLI.
-
-You can list the existing Flink environments like this:
-
-```console
-confluent flink environment list --url http://flink
-```
-
-The applications in an existing environment can be listed like this:
-
-```console
-confluent flink application list --environment myenv --url http://flink
-```
-
-Note: Flink is integrated in Control Center: http://controlcenter
-
-==== Basic Example
+=== Basic Usage
 
 Create environment (this shouldn't be required as the script will create that environment for you automatically):
 
@@ -136,77 +124,20 @@ Create environment (this shouldn't be required as the script will create that en
 confluent flink environment create myenv --url http://flink --kubernetes-namespace flink
 ```
 
-===== Flink Interactive
+==== Flink Interactive
 
 You can have an interactive Flink session using the `confluent` CLI. Just run:
 
 ```console
-
+confluent flink --environment myenv --url http://flink shell
 ```
 
 
+=== Flink SQL Statements
 
-===== Flink Statements
+You can access Flink via the web UI or on the command line.
 
-===== Flink Application
-
-Create basic demo application:
-
-```console
-confluent flink application create flink/application-basic-example.json --environment myenv --url http://flink
-```
-
-After a while, the webui for monitoring the Flink application can be made available on http://localhost:8090 like this:
-
-```console
-confluent flink application web-ui-forward basic-example --environment myenv --port 8090 --url http://flink
-```
-
-Delete the application:
-
-```console
-confluent flink application delete basic-example --environment myenv --url http://flink
-```
-
-=== ksqlDB
-
-Create a topic called `orders` using Confluent Cloud Console.
-
-Produce some automatically generated messages to that topic.
-
-Open a ksqlDB terminal, either in Confluent Control Center, or using this command:
-
-```console
-kubectl exec -ti ksqldb-0 -- ksql
-```
-
-In ksqlDB, you first need to register a stream for that topic:
-
-```console
-CREATE STREAM orders (
-  ordertime BIGINT,
-  orderid   INT,
-  itemid    STRING,
-  address   STRUCT<
-    city STRING,
-    state STRING,
-    zipcode INT
-  >
-) WITH (
-  KAFKA_TOPIC = 'orders',
-  VALUE_FORMAT = 'JSON'
-);
-```
-
-Then you can query the stream:
-
-```console
-SELECT * FROM orders EMIT CHANGES;
-```
-
-== Flink
-
-You can access via Control Center or on the command line.
+For the web UI, please go to http://flink/.
 
 On the command line, use this:
 
@@ -303,13 +234,96 @@ If you have used the statements above, stop them and remove the table:
 DROP TABLE large_orders;
 ```
 
-Use the flink application instead:
+You can create the same Flink SQL statements directly with a REST call instead of using an interactive session:
 
 ```console
 curl -v -H "Content-Type: application/json" http://flink/cmf/api/v1/environments/myenv/statements -d @./examples/flink/flink-sql-statements/filter-only-large-orders-flink-create-table.json
 curl -v -H "Content-Type: application/json" http://flink/cmf/api/v1/environments/myenv/statements -d @./examples/flink/flink-sql-statements/filter-only-large-orders-flink-insert-select.json
 ```
 
+=== Flink Application
+
+If you prefer writing code, you can also use Flink applications. For production use-cases, this is recommended as it gives you control over the application lifecycle.
+
+In the following, a few example applications are deployed.
+Note, the `confluent` CLI works with both Confluent Cloud and Confluent Platform. If you are working in a hybrid setup where you have both, make sure to logout via `confluent logout` from Confluent Cloud before using the CLI for accessing Confluent Platform. The `--url` is mandatory when accessing Confluent Platform with the CLI.
+
+You can list the existing Flink environments either in the Flink web UI or on the command line like this:
+
+```console
+confluent flink environment list --url http://flink
+```
+
+The applications in an existing environment can be listed like this:
+
+```console
+confluent flink application list --environment myenv --url http://flink
+```
+
+==== Flink TableAPI Example: Gathering statistics about orders
+
+In this example, we will deploy a Flink application which gathers statistics about the orders topic. The application is written in Java and uses the Flink TableAPI.
+
+First, we need to create a topic for the statistics results. This is done by running the following command:
+
+```console
+orders-statistics-last-hour
+```
+
+TODO: This is work on progress.
+
+Create basic demo application:
+
+```console
+confluent flink application create examples/flink/flink-application/orders-statistics/flink-application-orders-statistics.json --environment myenv --url http://flink
+```
+
+After a while, the webui for monitoring the Flink application can be made available on http://localhost:8090 like this:
+
+Delete the application:
+
+```console
+confluent flink application delete flink-application-orders-statistics --environment myenv --url http://flink
+```
+
+
+
+
+=== ksqlDB
+
+Create a topic called `orders` using Confluent Cloud Console if this has not been done by the connector configured above.
+
+Produce some automatically generated messages to that topic.
+
+Open a ksqlDB terminal, either in Confluent Control Center, or using this command:
+
+```console
+kubectl exec -ti ksqldb-0 -- ksql
+```
+
+In ksqlDB, you first need to register a stream for that topic:
+
+```console
+CREATE STREAM orders (
+  ordertime BIGINT,
+  orderid   INT,
+  itemid    STRING,
+  address   STRUCT<
+    city STRING,
+    state STRING,
+    zipcode INT
+  >
+) WITH (
+  KAFKA_TOPIC = 'orders',
+  VALUE_FORMAT = 'JSON'
+);
+```
+
+Then you can query the stream:
+
+```console
+SELECT * FROM orders EMIT CHANGES;
+```
 
 
 == Debugging the Setup

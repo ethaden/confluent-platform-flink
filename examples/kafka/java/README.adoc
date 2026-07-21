@@ -203,11 +203,3 @@ Show all dependencies:
 ```console
 ./gradlew -p java-producer dependencies
 ```
-
-
-== Shutting down, deleting containers
-
-```console
-docker compose down -v
-```
-

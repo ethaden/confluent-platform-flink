@@ -1,0 +1,14 @@
+serviceAccount:
+  name: "confluent-manager-for-apache-flink"
+image:
+  repository: docker.io/confluentinc
+#cmf:
+#  stackTraceLogging: true
+cmf:
+  artifacts:
+    enabled: true
+    basePath: s3://s3stoage/cmf-bucket
+    configuration:
+      fs.s3a.endpoint: rustfs-svc.rustfs.svc.cluster.local:9000
+      fs.s3a.access.key: ${AWS_ACCESS_KEY_ID_CMF}
+      fs.s3a.secret.key: ${AWS_SECRET_ACCESS_KEY_CMF}

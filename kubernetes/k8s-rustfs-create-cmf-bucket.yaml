@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rustfs-create-cmf-bucket
+spec:
+  ttlSecondsAfterFinished: 10 # Automatically deletes the job after completion
+  template:
+    spec:
+      containers:
+      - name: rc-client
+        image: rustfs/rc:${RUSTFS_VERSION}
+        command: ["sh", "-c"]
+        args:
+        - |
+          rc alias set local http://rustfs-svc.rustfs.svc.cluster.local:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY}
+          rc mb local/cmf-bucket
+          rc admin service-account create local/ ${AWS_ACCESS_KEY_ID_CMF} ${AWS_SECRET_ACCESS_KEY_CMF}
+      restartPolicy: Never
