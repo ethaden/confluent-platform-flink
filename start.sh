@@ -49,7 +49,7 @@ export AWS_SECRET_ACCESS_KEY_CMF="cmf-rustfs-secret"
 
 poll_endpoint() {
     local url="${1:?Error: URL endpoint is required}"
-    local max_attempts="${2:-120}"
+    local max_attempts="${2:-200}"
     local sleep_seconds="${3:-2}"
     local attempt=1
     echo "Wait until $url is reachable (max $max_attempts attempts, $sleep_seconds seconds between attempts)..."
@@ -132,9 +132,6 @@ kubectl -n flink apply -f kubernetes/k8s-flink-ingress.yaml
 kubectl create namespace flink-my-environment
 # We need to wait until Flink is available...
 CMF_URL="http://flink/cmf/api/v1/environments"
-TIMEOUT_SECS=300
-INTERVAL_SECS=5
-CONTINUE=0
 
 poll_endpoint $CMF_URL || exit 1
 # Create a catalog (Schema Registry)
@@ -197,11 +194,6 @@ if [ 1 -eq 0 ]; then
   curl -H "Content-Type: application/json" -X DELETE http://flink/cmf/api/v1/environments/myenv/compute-pools/mypool
   curl -H "Content-Type: application/json" -X DELETE http://flink/cmf/api/v1/environments/myenv
   curl -H "Content-Type: application/json" -X DELETE http://flink/cmf/api/v1/catalogs/kafka/mycatalog
-fi
-
-if [ $CONTINUE -ne 1 ]; then
-  echo "Error: Timeout reached before endpoint recovered."
-  exit 1
 fi
 
 # Create topic "orders" and datagen connector

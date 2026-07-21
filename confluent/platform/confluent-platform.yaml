@@ -209,16 +209,16 @@ spec:
         periodSeconds: 10
         failureThreshold: 30
         timeoutSeconds: 5
-      liveness:
-        periodSeconds: 15
-        failureThreshold: 3
-        timeoutSeconds: 5
-        initialDelaySeconds: 300
-      readiness:
-        initialDelaySeconds: 300
-        periodSeconds: 10
-        failureThreshold: 4
-        timeoutSeconds: 5
+#      liveness:
+#        periodSeconds: 15
+#        failureThreshold: 3
+#        timeoutSeconds: 5
+#        initialDelaySeconds: 300
+#      readiness:
+#        initialDelaySeconds: 300
+#        periodSeconds: 10
+#        failureThreshold: 4
+#        timeoutSeconds: 5
   dataVolumeCapacity: 10Gi
   configOverrides:
     server:
