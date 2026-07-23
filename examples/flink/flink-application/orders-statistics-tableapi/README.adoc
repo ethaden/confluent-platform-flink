@@ -1,0 +1,40 @@
+= This is an example Flink application
+
+== Build the application with Gradle
+
+Run:
+
+```console
+./gradlew build
+```
+
+This will create a super Jar in `app/build/libs/app-all.jar` that can be submitted to a Flink cluster.
+
+Submit the app with a reasonable name:
+
+```console
+confluent TODO...
+```
+
+
+== Development
+
+Check for dependency updates in each of the sub projects like this:
+
+```console
+./gradlew -P app dependencyUpdates -Drevision=release
+```
+
+Upgrade the dependency manually.
+
+For upgrading the gradle version, you can use this:
+
+```console
+gradle wrapper --gradle-version <gradle version>
+```
+
+Show all dependencies:
+
+```console
+./gradlew -p app dependencies
+```
